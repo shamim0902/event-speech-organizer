@@ -9,7 +9,165 @@ if (!defined('ABSPATH')) {
 
 class ApplicantModel
 {
+    /**
+     * Importable columns and their varchar limits. longtext columns are listed
+     * with a null limit — they need no truncation.
+     */
+    private static $importableColumns = array(
+        'name'        => 100,
+        'email'       => 60,
+        'comment'     => null,
+        'phone'       => 60,
+        'username'    => 1000,
+        'social'      => 2000,
+        'type'        => 200,
+        'topic'       => 2000,
+        'description' => null,
+        'cospeakers'  => 1000,
+        'audience'    => null,
+        'experience'  => 2000,
+        'question'    => 2000,
+        'status'      => 60,
+        'date'        => 100,
+    );
 
+    private static $allowedStatuses = array('approved', 'rejected', 'waiting');
+
+    public static function getImportableColumns()
+    {
+        return array_keys(self::$importableColumns);
+    }
+
+    /**
+     * Bulk-insert applicants from a parsed CSV, skipping any row whose email
+     * already exists in the table or repeats earlier in the same batch.
+     *
+     * @param array $rows list of column => value maps
+     * @return array summary counts plus per-row skip reasons
+     */
+    public function importRows($rows)
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'speakers';
+
+        $existing = array_flip($this->getExistingEmails());
+
+        $imported = 0;
+        $duplicates = 0;
+        $invalid = 0;
+        $failed = 0;
+        $issues = array();
+
+        foreach ($rows as $index => $row) {
+            // Row numbers are 1-based and skip the header, so the number here
+            // matches what the user sees in a spreadsheet.
+            $rowNumber = $index + 2;
+
+            if (!is_array($row)) {
+                $invalid++;
+                $issues[] = array('row' => $rowNumber, 'reason' => 'Malformed row.');
+                continue;
+            }
+
+            $name = isset($row['name']) ? trim($row['name']) : '';
+            $email = isset($row['email']) ? strtolower(trim($row['email'])) : '';
+
+            if (!$name || !$email) {
+                $invalid++;
+                $issues[] = array('row' => $rowNumber, 'reason' => 'Missing name or email.');
+                continue;
+            }
+
+            if (!is_email($email)) {
+                $invalid++;
+                $issues[] = array('row' => $rowNumber, 'reason' => 'Invalid email: ' . $email);
+                continue;
+            }
+
+            if (isset($existing[$email])) {
+                $duplicates++;
+                $issues[] = array('row' => $rowNumber, 'reason' => 'Duplicate email: ' . $email);
+                continue;
+            }
+
+            $data = $this->prepareImportRow($row, $name, $email);
+
+            $inserted = $wpdb->insert($table_name, $data);
+
+            if ($inserted === false) {
+                $failed++;
+                $issues[] = array(
+                    'row'    => $rowNumber,
+                    'reason' => $wpdb->last_error ? $wpdb->last_error : 'Database insert failed.',
+                );
+                continue;
+            }
+
+            // Claim the email so later rows in this same batch dedupe against it.
+            $existing[$email] = true;
+            $imported++;
+        }
+
+        return array(
+            'status'     => true,
+            'imported'   => $imported,
+            'duplicates' => $duplicates,
+            'invalid'    => $invalid,
+            'failed'     => $failed,
+            // Cap the detail list so a bad 5,000-row file cannot balloon the response.
+            'issues'     => array_slice($issues, 0, 50),
+        );
+    }
+
+    private function prepareImportRow($row, $name, $email)
+    {
+        $data = array();
+
+        foreach (self::$importableColumns as $column => $maxLength) {
+            $value = isset($row[$column]) ? $row[$column] : '';
+            $value = is_scalar($value) ? (string) $value : '';
+
+            // The longtext columns hold prose, so keep their line breaks —
+            // sanitize_text_field() would flatten a multi-paragraph bio.
+            if ($maxLength === null) {
+                $value = sanitize_textarea_field($value);
+            } else {
+                $value = sanitize_text_field($value);
+            }
+
+            if ($maxLength && function_exists('mb_substr')) {
+                $value = mb_substr($value, 0, $maxLength);
+            } elseif ($maxLength) {
+                $value = substr($value, 0, $maxLength);
+            }
+
+            $data[$column] = $value;
+        }
+
+        $data['name'] = sanitize_text_field($name);
+        $data['email'] = sanitize_email($email);
+
+        $status = strtolower(trim($data['status']));
+        $data['status'] = in_array($status, self::$allowedStatuses, true) ? $status : 'waiting';
+
+        // Columns that exist on the table but are never supplied by an import.
+        $data['consent'] = '';
+        $data['ip'] = '';
+
+        return $data;
+    }
+
+    public function getExistingEmails()
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'speakers';
+
+        $emails = $wpdb->get_col("SELECT email FROM $table_name WHERE email <> ''");
+
+        return array_map(function ($email) {
+            return strtolower(trim($email));
+        }, (array) $emails);
+    }
 
     public function getAll()
     {

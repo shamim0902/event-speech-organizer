@@ -41,7 +41,11 @@ $--font-path: '~element-ui/lib/theme-chalk/fonts';
 
 $--font-family: $eso-font;
 
-.eso-app {
+// Declared on :root, not .eso-app — Element renders dialogs, popovers and
+// messages at document body level, outside the app wrapper, and they still
+// need these tokens to resolve. This stylesheet only loads on the plugin's
+// own admin screen, so nothing else inherits them.
+:root {
     --eso-blue: #{$eso-blue};
     --eso-blue-hover: #{$eso-blue-hover};
     --eso-green: #{$eso-green};

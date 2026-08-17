@@ -54,9 +54,11 @@ import {
     Notification,
     Card,
     TimeSelect,
-    Autocomplete
+    Autocomplete,
+    Progress
 } from 'element-ui';
 
+Vue.use(Progress);
 Vue.use(Autocomplete);
 Vue.use(TimeSelect);
 Vue.use(Button);

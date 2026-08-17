@@ -25,6 +25,7 @@ class AdminAjaxHandler
             'search_speakers' => 'searchSpeakers',
             'add_applicant' => 'addApplicant',
             'edit_applicant' => 'editApplicant',
+            'import_applicants' => 'importApplicants',
         );
 
         if (isset($validRoutes[$route])) {
@@ -32,6 +33,47 @@ class AdminAjaxHandler
             return $this->{$validRoutes[$route]}();
         }
         do_action('event_speech_organizer/admin_ajax_handler_catch', $route);
+    }
+
+    /**
+     * Bulk import applicants from a CSV parsed in the browser.
+     *
+     * Rows arrive as one JSON string rather than a nested form array: a 200-row
+     * batch of 15 fields would be 3,000 input vars, well past PHP's default
+     * max_input_vars of 1,000, and PHP truncates that silently.
+     *
+     * NOTE: this route verifies a nonce and capability. The other routes in
+     * this class still do neither — see the security backlog.
+     */
+    public function importApplicants()
+    {
+        if (!AccessControl::hasTopLevelMenuPermission()) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('You are not allowed to import applicants.', 'textdomain'),
+            ), 403);
+        }
+
+        if (!check_ajax_referer('event_speech_organizer_admin', 'nonce', false)) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('Security check failed. Please reload the page and try again.', 'textdomain'),
+            ), 403);
+        }
+
+        $raw = isset($_REQUEST['rows']) ? wp_unslash($_REQUEST['rows']) : '';
+        $rows = json_decode($raw, true);
+
+        if (!is_array($rows) || !$rows) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('No rows to import.', 'textdomain'),
+            ), 400);
+        }
+
+        $applicantModel = new ApplicantModel();
+
+        wp_send_json($applicantModel->importRows($rows));
     }
 
     public function editApplicant()

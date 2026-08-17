@@ -27,6 +27,14 @@
 
       <el-button
         type="default"
+        icon="el-icon-upload2"
+        size="small"
+        @click="importModal = true"
+        >Import CSV</el-button
+      >
+
+      <el-button
+        type="default"
         icon="el-icon-download"
         size="small"
         :disabled="!visibleSpeakers.length"
@@ -176,6 +184,12 @@
       </ul>
     </div>
 
+    <import-dialog
+      :visible="importModal"
+      @close="importModal = false"
+      @imported="onImported"
+    />
+
     <!-- add / edit applicant -->
     <el-dialog
       :title="dialogTitle"
@@ -309,6 +323,8 @@
 var md5 = require('md5')
 import EmptyState from './Common/EmptyState.vue'
 import StatusBadge from './Common/StatusBadge.vue'
+import ImportDialog from './ImportDialog.vue'
+import { IMPORT_FIELDS, toCsv } from './Common/csv'
 
 const STATUS_ORDER = { approved: 0, waiting: 1, rejected: 2 }
 
@@ -316,11 +332,13 @@ export default {
   name: 'Speaker',
   components: {
     EmptyState,
-    StatusBadge
+    StatusBadge,
+    ImportDialog
   },
   data () {
     return {
       speakerModal: false,
+      importModal: false,
       search: '',
       sortBy: 'newest',
       speakerFormMock: {
@@ -428,13 +446,17 @@ export default {
         this.refresh()
       })
     },
+    onImported (result) {
+      if (result.imported) {
+        this.$message.success(
+          result.imported + ' applicant' + (result.imported === 1 ? '' : 's') + ' imported.'
+        )
+        this.refresh()
+      }
+    },
     downloadCSV () {
-      const escapeCell = value => '"' + String(value || '').replace(/"/g, '""') + '"'
-
-      let csvContent = 'name,email\r\n'
-      this.visibleSpeakers.forEach(speaker => {
-        csvContent += escapeCell(speaker.name) + ',' + escapeCell(speaker.email) + '\r\n'
-      })
+      // Exports every importable column so an export can be re-imported.
+      const csvContent = toCsv(IMPORT_FIELDS, this.visibleSpeakers)
 
       this.downloadStringAsFile(csvContent, this.$route.name + '.csv')
     },

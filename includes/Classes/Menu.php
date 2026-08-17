@@ -113,6 +113,8 @@ class Menu
             //'image_upload_url' => admin_url('admin-ajax.php?action=wpf_global_settings_handler&route=wpf_upload_image'),
             'assets_url' => EVENT_SPEECH_ORGANIZER_URL . 'assets/',
             'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('event_speech_organizer_admin'),
+            'import_columns' => ApplicantModel::getImportableColumns(),
             'speakers' => (new ApplicantModel())->getAll(),
         ));
 
