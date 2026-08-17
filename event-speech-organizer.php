@@ -44,15 +44,35 @@ if (!defined('EVENT_SPEECH_ORGANIZER_VERSION')) {
     {
         public function boot()
         {
+            require_once EVENT_SPEECH_ORGANIZER_DIR . 'includes/autoload.php';
+
             if (is_admin()) {
                 $this->adminHooks();
             }
+
+            // Must run outside the is_admin() guard: form submissions are
+            // processed on the front end, so the integration would never fire.
+            $this->integrationHooks();
+        }
+
+        /**
+         * Fluent Forms integration. Registers a per-form feed that creates an
+         * applicant from a submission.
+         */
+        public function integrationHooks()
+        {
+            // The integration needs no API credentials, so there is nothing to
+            // configure globally and nothing to switch on — keep it always
+            // available rather than hiding it behind a global toggle.
+            add_filter('fluentform/is_integration_enabled_EventSpeechOrganizer', '__return_true');
+
+            add_action('fluentform/loaded', function ($app) {
+                new \EventSpeechOrganizer\Classes\Integrations\FluentFormIntegration($app);
+            });
         }
 
         public function adminHooks()
         {
-            require EVENT_SPEECH_ORGANIZER_DIR . 'includes/autoload.php';
-
             //Register Admin menu
             $menu = new \EventSpeechOrganizer\Classes\Menu();
             $menu->register();
