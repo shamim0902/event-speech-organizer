@@ -115,6 +115,7 @@ class Menu
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('event_speech_organizer_admin'),
             'import_columns' => ApplicantModel::getImportableColumns(),
+            'has_fluentform' => FluentFormImporter::isAvailable(),
             'speakers' => (new ApplicantModel())->getAll(),
         ));
 

@@ -26,6 +26,9 @@ class AdminAjaxHandler
             'add_applicant' => 'addApplicant',
             'edit_applicant' => 'editApplicant',
             'import_applicants' => 'importApplicants',
+            'fluentform_forms' => 'fluentFormForms',
+            'fluentform_columns' => 'fluentFormColumns',
+            'fluentform_import' => 'fluentFormImport',
         );
 
         if (isset($validRoutes[$route])) {
@@ -47,19 +50,7 @@ class AdminAjaxHandler
      */
     public function importApplicants()
     {
-        if (!AccessControl::hasTopLevelMenuPermission()) {
-            wp_send_json(array(
-                'status' => false,
-                'message' => __('You are not allowed to import applicants.', 'textdomain'),
-            ), 403);
-        }
-
-        if (!check_ajax_referer('event_speech_organizer_admin', 'nonce', false)) {
-            wp_send_json(array(
-                'status' => false,
-                'message' => __('Security check failed. Please reload the page and try again.', 'textdomain'),
-            ), 403);
-        }
+        $this->guardImportRequest();
 
         $raw = isset($_REQUEST['rows']) ? wp_unslash($_REQUEST['rows']) : '';
         $rows = json_decode($raw, true);
@@ -74,6 +65,119 @@ class AdminAjaxHandler
         $applicantModel = new ApplicantModel();
 
         wp_send_json($applicantModel->importRows($rows));
+    }
+
+    /**
+     * Shared guard for the import routes. Returns nothing and halts the
+     * request when the caller is not allowed.
+     */
+    private function guardImportRequest()
+    {
+        if (!AccessControl::hasTopLevelMenuPermission()) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('You are not allowed to import applicants.', 'textdomain'),
+            ), 403);
+        }
+
+        if (!check_ajax_referer('event_speech_organizer_admin', 'nonce', false)) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('Security check failed. Please reload the page and try again.', 'textdomain'),
+            ), 403);
+        }
+    }
+
+    private function guardFluentForm()
+    {
+        $this->guardImportRequest();
+
+        if (!FluentFormImporter::isAvailable()) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('Fluent Forms is not installed on this site.', 'textdomain'),
+            ), 400);
+        }
+    }
+
+    public function fluentFormForms()
+    {
+        $this->guardFluentForm();
+
+        $importer = new FluentFormImporter();
+
+        wp_send_json(array(
+            'status' => true,
+            'forms' => $importer->getForms(),
+        ));
+    }
+
+    public function fluentFormColumns()
+    {
+        $this->guardFluentForm();
+
+        $formId = isset($_REQUEST['form_id']) ? absint($_REQUEST['form_id']) : 0;
+
+        if (!$formId) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('No form selected.', 'textdomain'),
+            ), 400);
+        }
+
+        $importer = new FluentFormImporter();
+
+        wp_send_json(array(
+            'status' => true,
+            'columns' => $importer->getColumns($formId),
+            'total' => $importer->countSubmissions($formId),
+        ));
+    }
+
+    /**
+     * Import one slice of a form's submissions. The browser sends the mapping
+     * plus an offset and the server reads, flattens and inserts that slice —
+     * submissions never round-trip through the client.
+     */
+    public function fluentFormImport()
+    {
+        $this->guardFluentForm();
+
+        $formId = isset($_REQUEST['form_id']) ? absint($_REQUEST['form_id']) : 0;
+        $offset = isset($_REQUEST['offset']) ? absint($_REQUEST['offset']) : 0;
+        $limit = isset($_REQUEST['limit']) ? absint($_REQUEST['limit']) : 100;
+        $limit = min(max($limit, 1), 500);
+
+        $mapping = json_decode(isset($_REQUEST['mapping']) ? wp_unslash($_REQUEST['mapping']) : '', true);
+
+        if (!$formId || !is_array($mapping)) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('A form and a field mapping are required.', 'textdomain'),
+            ), 400);
+        }
+
+        $importer = new FluentFormImporter();
+        $rows = $importer->getMappedRows($formId, $mapping, $offset, $limit);
+
+        if (!$rows) {
+            wp_send_json(array(
+                'status' => true,
+                'imported' => 0,
+                'duplicates' => 0,
+                'invalid' => 0,
+                'failed' => 0,
+                'issues' => array(),
+                'processed' => 0,
+            ));
+        }
+
+        $applicantModel = new ApplicantModel();
+        // Report the 1-based submission position within the form, not the slice.
+        $result = $applicantModel->importRows($rows, $offset + 1);
+        $result['processed'] = count($rows);
+
+        wp_send_json($result);
     }
 
     public function editApplicant()

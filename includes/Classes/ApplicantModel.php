@@ -42,10 +42,13 @@ class ApplicantModel
      * Bulk-insert applicants from a parsed CSV, skipping any row whose email
      * already exists in the table or repeats earlier in the same batch.
      *
-     * @param array $rows list of column => value maps
+     * @param array $rows          list of column => value maps
+     * @param int   $rowNumberBase number reported for the first row. CSV passes
+     *                             2 (header occupies row 1); Fluent Forms passes
+     *                             the 1-based position of the slice.
      * @return array summary counts plus per-row skip reasons
      */
-    public function importRows($rows)
+    public function importRows($rows, $rowNumberBase = 2)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
@@ -59,9 +62,7 @@ class ApplicantModel
         $issues = array();
 
         foreach ($rows as $index => $row) {
-            // Row numbers are 1-based and skip the header, so the number here
-            // matches what the user sees in a spreadsheet.
-            $rowNumber = $index + 2;
+            $rowNumber = $index + $rowNumberBase;
 
             if (!is_array($row)) {
                 $invalid++;

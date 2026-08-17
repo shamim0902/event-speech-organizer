@@ -1,20 +1,44 @@
 <template>
   <el-dialog
-    title="Import applicants from CSV"
+    title="Import applicants"
     :visible="visible"
-    width="820px"
+    width="840px"
     append-to-body
     :close-on-click-modal="false"
     @update:visible="close"
   >
     <el-steps :active="step" simple finish-status="success">
-      <el-step title="Choose file" icon="el-icon-upload"></el-step>
-      <el-step title="Match columns" icon="el-icon-s-operation"></el-step>
+      <el-step title="Source" icon="el-icon-share"></el-step>
+      <el-step :title="sourceStepTitle" icon="el-icon-upload"></el-step>
+      <el-step title="Match fields" icon="el-icon-s-operation"></el-step>
       <el-step title="Result" icon="el-icon-circle-check"></el-step>
     </el-steps>
 
-    <!-- Step 1 — file -->
+    <!-- Step 0 — source -->
     <div class="eso-import__step" v-if="step === 0">
+      <div class="eso-import__sources">
+        <button class="eso-import__source" type="button" @click="chooseSource('csv')">
+          <i class="el-icon-document"></i>
+          <strong>CSV file</strong>
+          <span>Upload a spreadsheet exported from anywhere.</span>
+        </button>
+
+        <button
+          class="eso-import__source"
+          type="button"
+          :disabled="!hasFluentForm"
+          @click="chooseSource('fluentform')"
+        >
+          <i class="el-icon-tickets"></i>
+          <strong>Fluent Forms</strong>
+          <span v-if="hasFluentForm">Import submissions from a form on this site.</span>
+          <span v-else>Fluent Forms is not installed on this site.</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 1a — CSV file -->
+    <div class="eso-import__step" v-else-if="step === 1 && source === 'csv'">
       <el-upload
         drag
         action=""
@@ -30,11 +54,11 @@
       </el-upload>
 
       <el-alert
-        v-if="parseError"
+        v-if="error"
         class="eso-import__alert"
         type="error"
         :closable="false"
-        :title="parseError"
+        :title="error"
       ></el-alert>
 
       <p class="eso-import__hint">
@@ -43,12 +67,48 @@
       </p>
     </div>
 
-    <!-- Step 2 — mapping -->
+    <!-- Step 1b — Fluent Forms form picker -->
     <div class="eso-import__step" v-else-if="step === 1">
+      <div v-loading="loadingForms">
+        <el-alert
+          v-if="error"
+          class="eso-import__alert"
+          type="error"
+          :closable="false"
+          :title="error"
+        ></el-alert>
+
+        <p class="eso-import__hint" v-if="!forms.length && !loadingForms && !error">
+          No Fluent Forms form has any submissions yet.
+        </p>
+
+        <ul class="eso-import__forms" v-else>
+          <li v-for="form in forms" :key="form.id">
+            <button
+              class="eso-import__form"
+              type="button"
+              :class="{ 'is-selected': selectedForm === form.id }"
+              @click="selectForm(form)"
+            >
+              <span class="eso-import__form-title">{{ form.title }}</span>
+              <span class="eso-import__form-meta">
+                #{{ form.id }} ·
+                {{ form.submissions }}
+                {{ form.submissions === 1 ? 'submission' : 'submissions' }}
+              </span>
+              <i class="el-icon-arrow-right"></i>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 2 — mapping -->
+    <div class="eso-import__step" v-else-if="step === 2">
       <div class="eso-import__summary">
-        <strong>{{ fileName }}</strong>
-        <span>{{ rows.length }} data {{ rows.length === 1 ? 'row' : 'rows' }}</span>
-        <span>{{ headers.length }} columns</span>
+        <strong>{{ sourceLabel }}</strong>
+        <span>{{ total }} {{ total === 1 ? 'record' : 'records' }}</span>
+        <span>{{ sourceColumns.length }} source columns</span>
       </div>
 
       <el-alert
@@ -57,20 +117,16 @@
         type="warning"
         :closable="false"
         :title="'Required field not matched: ' + missingRequired.join(', ')"
-        description="Pick the matching column below before importing."
+        description="Pick the matching source column below before importing."
       ></el-alert>
 
       <div class="eso-import__map">
         <div class="eso-import__map-row eso-import__map-row--head">
           <span>Applicant field</span>
-          <span>CSV column</span>
+          <span>Source column</span>
           <span>First value</span>
         </div>
-        <div
-          class="eso-import__map-row"
-          v-for="field in fields"
-          :key="field.key"
-        >
+        <div class="eso-import__map-row" v-for="field in fields" :key="field.key">
           <label>
             {{ field.label
             }}<em v-if="field.required" class="eso-import__required">*</em>
@@ -79,14 +135,15 @@
           <el-select
             v-model="mapping[field.key]"
             size="small"
+            filterable
             placeholder="Ignore"
           >
-            <el-option label="— Ignore —" :value="-1"></el-option>
+            <el-option label="— Ignore —" value=""></el-option>
             <el-option
-              v-for="(header, index) in headers"
-              :key="index"
-              :label="header || 'Column ' + (index + 1)"
-              :value="index"
+              v-for="column in sourceColumns"
+              :key="String(column.value)"
+              :label="column.label"
+              :value="column.value"
             ></el-option>
           </el-select>
 
@@ -120,7 +177,7 @@
         <p class="eso-section__title">Skipped rows</p>
         <ul>
           <li v-for="(issue, index) in result.issues" :key="index">
-            Row {{ issue.row }} — {{ issue.reason }}
+            {{ rowWord }} {{ issue.row }} — {{ issue.reason }}
           </li>
         </ul>
         <p class="eso-import__hint" v-if="truncatedIssues">
@@ -131,7 +188,7 @@
 
     <div class="eso-import__progress" v-if="importing">
       <el-progress :percentage="progress" :stroke-width="6"></el-progress>
-      <span>Importing… {{ processed }} of {{ rows.length }}</span>
+      <span>Importing… {{ processed }} of {{ total }}</span>
     </div>
 
     <span slot="footer">
@@ -140,22 +197,23 @@
       </template>
 
       <template v-else-if="step === 1">
-        <el-button size="small" :disabled="importing" @click="reset"
-          >Choose another file</el-button
-        >
+        <el-button size="small" @click="back">Back</el-button>
+      </template>
+
+      <template v-else-if="step === 2">
+        <el-button size="small" :disabled="importing" @click="back">Back</el-button>
         <el-button
           size="small"
           type="primary"
           :loading="importing"
           :disabled="!canImport"
           @click="startImport"
-          >Import {{ rows.length }}
-          {{ rows.length === 1 ? 'applicant' : 'applicants' }}</el-button
+          >Import {{ total }} {{ total === 1 ? 'applicant' : 'applicants' }}</el-button
         >
       </template>
 
       <template v-else>
-        <el-button size="small" @click="reset">Import another file</el-button>
+        <el-button size="small" @click="reset">Import something else</el-button>
         <el-button size="small" type="primary" @click="close">Done</el-button>
       </template>
     </span>
@@ -163,11 +221,27 @@
 </template>
 
 <script>
-import { IMPORT_FIELDS, parseCsv, autoMapColumns, applyMapping } from './Common/csv'
+import {
+  IMPORT_FIELDS,
+  parseCsv,
+  autoMapColumns,
+  applyMapping,
+  columnsFromHeaders
+} from './Common/csv'
 
-// Rows are posted in batches so a large file does not hit post_max_size or
-// PHP's max_input_vars, and so the progress bar has something to report.
-const BATCH_SIZE = 200
+// CSV rows post from the browser, so batches stay small enough for
+// post_max_size. Fluent Forms rows never leave the server, so its slices can
+// be larger — only the mapping and an offset travel over the wire.
+const CSV_BATCH = 200
+const FLUENTFORM_BATCH = 100
+
+const emptyResult = () => ({
+  imported: 0,
+  duplicates: 0,
+  invalid: 0,
+  failed: 0,
+  issues: []
+})
 
 export default {
   name: 'ImportDialog',
@@ -180,37 +254,55 @@ export default {
   data () {
     return {
       step: 0,
+      source: '',
       fields: IMPORT_FIELDS,
+      error: '',
+
+      // CSV
       fileName: '',
-      headers: [],
       rows: [],
+
+      // Fluent Forms
+      forms: [],
+      loadingForms: false,
+      selectedForm: 0,
+      selectedFormTitle: '',
+
+      sourceColumns: [],
       mapping: {},
-      parseError: '',
+      total: 0,
+
       importing: false,
       processed: 0,
-      result: {
-        imported: 0,
-        duplicates: 0,
-        invalid: 0,
-        failed: 0,
-        issues: []
-      }
+      result: emptyResult()
     }
   },
   computed: {
+    hasFluentForm () {
+      return !!window.eventSpeechOrganizerAdmin.has_fluentform
+    },
+    sourceStepTitle () {
+      return this.source === 'fluentform' ? 'Choose form' : 'Choose file'
+    },
+    sourceLabel () {
+      return this.source === 'fluentform' ? this.selectedFormTitle : this.fileName
+    },
+    rowWord () {
+      return this.source === 'fluentform' ? 'Submission' : 'Row'
+    },
     missingRequired () {
       return this.fields
-        .filter(field => field.required && this.mapping[field.key] === -1)
+        .filter(field => field.required && this.mapping[field.key] === '')
         .map(field => field.label)
     },
     canImport () {
-      return this.rows.length > 0 && !this.missingRequired.length
+      return this.total > 0 && !this.missingRequired.length
     },
     progress () {
-      if (!this.rows.length) {
+      if (!this.total) {
         return 0
       }
-      return Math.round((this.processed / this.rows.length) * 100)
+      return Math.min(100, Math.round((this.processed / this.total) * 100))
     },
     truncatedIssues () {
       const skipped = this.result.duplicates + this.result.invalid + this.result.failed
@@ -226,16 +318,49 @@ export default {
     },
     reset () {
       this.step = 0
+      this.source = ''
+      this.error = ''
       this.fileName = ''
-      this.headers = []
       this.rows = []
+      this.forms = []
+      this.selectedForm = 0
+      this.selectedFormTitle = ''
+      this.sourceColumns = []
       this.mapping = {}
-      this.parseError = ''
+      this.total = 0
       this.processed = 0
-      this.result = { imported: 0, duplicates: 0, invalid: 0, failed: 0, issues: [] }
+      this.result = emptyResult()
     },
+    back () {
+      this.error = ''
+
+      if (this.step === 2) {
+        this.step = 1
+        return
+      }
+
+      this.reset()
+    },
+    chooseSource (source) {
+      this.source = source
+      this.error = ''
+      this.step = 1
+
+      if (source === 'fluentform') {
+        this.fetchForms()
+      }
+    },
+    toMappingStep (columns, total) {
+      this.sourceColumns = columns
+      this.total = total
+      this.mapping = autoMapColumns(columns)
+      this.step = 2
+    },
+
+    // --- CSV -------------------------------------------------------------
+
     onFileChange (file) {
-      this.parseError = ''
+      this.error = ''
 
       const raw = file.raw || file
       const reader = new FileReader()
@@ -243,12 +368,12 @@ export default {
       reader.onload = event => {
         try {
           this.loadCsv(raw.name, event.target.result)
-        } catch (error) {
-          this.parseError = 'Could not read that file: ' + error.message
+        } catch (err) {
+          this.error = 'Could not read that file: ' + err.message
         }
       }
       reader.onerror = () => {
-        this.parseError = 'Could not read that file.'
+        this.error = 'Could not read that file.'
       }
 
       reader.readAsText(raw)
@@ -257,56 +382,110 @@ export default {
       const parsed = parseCsv(text)
 
       if (parsed.length < 2) {
-        this.parseError = 'That file needs a header row and at least one data row.'
+        this.error = 'That file needs a header row and at least one data row.'
         return
       }
 
       this.fileName = name
-      this.headers = parsed[0].map(header => String(header).trim())
       this.rows = parsed.slice(1)
-      this.mapping = autoMapColumns(this.headers)
-      this.step = 1
+
+      const headers = parsed[0].map(header => String(header).trim())
+
+      this.toMappingStep(columnsFromHeaders(headers, this.rows[0]), this.rows.length)
     },
+
+    // --- Fluent Forms ------------------------------------------------------
+
+    fetchForms () {
+      this.loadingForms = true
+      this.error = ''
+
+      this.$get({
+        action: 'event_speech_organizer_admin_ajax',
+        route: 'fluentform_forms',
+        nonce: window.eventSpeechOrganizerAdmin.nonce
+      })
+        .then(response => {
+          if (!response || response.status === false) {
+            this.error = (response && response.message) || 'Could not load forms.'
+            return
+          }
+          this.forms = response.forms || []
+        })
+        .fail(xhr => {
+          this.error = this.errorFrom(xhr, 'Could not load forms.')
+        })
+        .always(() => {
+          this.loadingForms = false
+        })
+    },
+    selectForm (form) {
+      this.selectedForm = form.id
+      this.selectedFormTitle = form.title
+      this.loadingForms = true
+      this.error = ''
+
+      this.$get({
+        action: 'event_speech_organizer_admin_ajax',
+        route: 'fluentform_columns',
+        nonce: window.eventSpeechOrganizerAdmin.nonce,
+        form_id: form.id
+      })
+        .then(response => {
+          if (!response || response.status === false) {
+            this.error = (response && response.message) || 'Could not read that form.'
+            return
+          }
+          this.toMappingStep(response.columns || [], response.total || 0)
+        })
+        .fail(xhr => {
+          this.error = this.errorFrom(xhr, 'Could not read that form.')
+        })
+        .always(() => {
+          this.loadingForms = false
+        })
+    },
+
+    // --- Shared ------------------------------------------------------------
+
     previewFor (key) {
-      const index = this.mapping[key]
+      const source = this.mapping[key]
 
-      if (index === -1 || !this.rows.length) {
+      if (source === '' || source === undefined) {
         return '—'
       }
 
-      const value = this.rows[0][index]
-      if (value === undefined || String(value).trim() === '') {
-        return '—'
-      }
+      const column = this.sourceColumns.find(item => item.value === source)
 
-      const text = String(value).trim()
-      return text.length > 40 ? text.slice(0, 40) + '…' : text
+      return column && column.sample ? column.sample : '—'
     },
     startImport () {
-      const records = applyMapping(this.rows, this.mapping)
-
-      const batches = []
-      for (let i = 0; i < records.length; i += BATCH_SIZE) {
-        batches.push(records.slice(i, i + BATCH_SIZE))
-      }
-
       this.importing = true
       this.processed = 0
-      this.result = { imported: 0, duplicates: 0, invalid: 0, failed: 0, issues: [] }
+      this.result = emptyResult()
 
-      this.sendBatches(batches, 0)
+      if (this.source === 'fluentform') {
+        this.importFluentFormSlice(0)
+        return
+      }
+
+      const records = applyMapping(this.rows, this.mapping)
+      const batches = []
+
+      for (let i = 0; i < records.length; i += CSV_BATCH) {
+        batches.push(records.slice(i, i + CSV_BATCH))
+      }
+
+      this.sendCsvBatches(batches, 0)
     },
-    sendBatches (batches, index) {
+    sendCsvBatches (batches, index) {
       if (index >= batches.length) {
-        this.importing = false
-        this.step = 2
-        this.$emit('imported', this.result)
+        this.finishImport()
         return
       }
 
       const batch = batches[index]
-      // Offset so reported row numbers line up with the original file.
-      const offset = index * BATCH_SIZE
+      const offset = index * CSV_BATCH
 
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
@@ -320,32 +499,73 @@ export default {
             return
           }
 
-          this.result.imported += response.imported || 0
-          this.result.duplicates += response.duplicates || 0
-          this.result.invalid += response.invalid || 0
-          this.result.failed += response.failed || 0
-
-          if (response.issues && response.issues.length) {
-            response.issues.forEach(issue => {
-              if (this.result.issues.length < 50) {
-                this.result.issues.push({
-                  row: issue.row + offset,
-                  reason: issue.reason
-                })
-              }
-            })
-          }
-
-          this.processed = Math.min(this.processed + batch.length, this.rows.length)
-          this.sendBatches(batches, index + 1)
+          this.collect(response, offset)
+          this.processed = Math.min(this.processed + batch.length, this.total)
+          this.sendCsvBatches(batches, index + 1)
         })
         .fail(xhr => {
-          const message =
-            xhr && xhr.responseJSON && xhr.responseJSON.message
-              ? xhr.responseJSON.message
-              : 'Import request failed.'
-          this.failImport(message)
+          this.failImport(this.errorFrom(xhr, 'Import request failed.'))
         })
+    },
+    importFluentFormSlice (offset) {
+      if (offset >= this.total) {
+        this.finishImport()
+        return
+      }
+
+      this.$post({
+        action: 'event_speech_organizer_admin_ajax',
+        route: 'fluentform_import',
+        nonce: window.eventSpeechOrganizerAdmin.nonce,
+        form_id: this.selectedForm,
+        mapping: JSON.stringify(this.mapping),
+        offset: offset,
+        limit: FLUENTFORM_BATCH
+      })
+        .then(response => {
+          if (!response || response.status === false) {
+            this.failImport((response && response.message) || 'Import failed.')
+            return
+          }
+
+          this.collect(response, 0)
+
+          const processed = response.processed || 0
+
+          // A short slice means we ran off the end of the submissions.
+          if (!processed) {
+            this.finishImport()
+            return
+          }
+
+          this.processed = Math.min(this.processed + processed, this.total)
+          this.importFluentFormSlice(offset + processed)
+        })
+        .fail(xhr => {
+          this.failImport(this.errorFrom(xhr, 'Import request failed.'))
+        })
+    },
+    collect (response, rowOffset) {
+      this.result.imported += response.imported || 0
+      this.result.duplicates += response.duplicates || 0
+      this.result.invalid += response.invalid || 0
+      this.result.failed += response.failed || 0
+
+      if (response.issues && response.issues.length) {
+        response.issues.forEach(issue => {
+          if (this.result.issues.length < 50) {
+            this.result.issues.push({
+              row: issue.row + rowOffset,
+              reason: issue.reason
+            })
+          }
+        })
+      }
+    },
+    finishImport () {
+      this.importing = false
+      this.step = 3
+      this.$emit('imported', this.result)
     },
     failImport (message) {
       this.importing = false
@@ -353,9 +573,15 @@ export default {
 
       // Anything already inserted is real, so surface the partial result.
       if (this.result.imported) {
-        this.step = 2
+        this.step = 3
         this.$emit('imported', this.result)
       }
+    },
+    errorFrom (xhr, fallback) {
+      if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+        return xhr.responseJSON.message
+      }
+      return fallback
     }
   }
 }

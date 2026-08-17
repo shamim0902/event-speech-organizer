@@ -9,11 +9,12 @@
  * `aliases` are additional header spellings that auto-map to the field.
  */
 export const IMPORT_FIELDS = [
-  { key: 'name', label: 'Name', required: true, aliases: ['fullname', 'speakername', 'applicant'] },
+  // `names` is the field name Fluent Forms always gives its input_name element.
+  { key: 'name', label: 'Name', required: true, aliases: ['names', 'fullname', 'speakername', 'applicant'] },
   { key: 'email', label: 'Email', required: true, aliases: ['emailaddress', 'mail'] },
   { key: 'phone', label: 'Phone', aliases: ['phonenumber', 'mobile', 'contact'] },
   { key: 'username', label: 'WordPress.org username', aliases: ['wp', 'wpusername', 'wordpressusername', 'wporg'] },
-  { key: 'social', label: 'Social handles', aliases: ['socials', 'socialhandle', 'socialmedia', 'twitter'] },
+  { key: 'social', label: 'Social handles', aliases: ['socials', 'socialhandle', 'socialmedia', 'twitter', 'website', 'url', 'link'] },
   { key: 'comment', label: 'Bio', aliases: ['bio', 'biography', 'about', 'speakerbio'] },
   { key: 'topic', label: 'Topic title', aliases: ['talktitle', 'title', 'talk', 'session', 'sessiontitle'] },
   { key: 'type', label: 'Talk type', aliases: ['talktype', 'sessiontype', 'format'] },
@@ -105,29 +106,60 @@ export function parseCsv (text) {
 }
 
 /**
- * Build a mapping of field key => column index by matching header names.
- * Unmatched fields map to -1 ("ignore this field").
+ * Describe CSV headers as generic source columns, so CSV and Fluent Forms
+ * share one mapping UI. `value` is the column index for CSV and the flattened
+ * response key for Fluent Forms.
  */
-export function autoMapColumns (headers) {
-  const normalized = headers.map(normalize)
+export function columnsFromHeaders (headers, firstRow) {
+  return headers.map((header, index) => {
+    const sample = firstRow && firstRow[index] !== undefined ? String(firstRow[index]).trim() : ''
+
+    return {
+      value: index,
+      label: header || 'Column ' + (index + 1),
+      sample: sample.length > 60 ? sample.slice(0, 60) + '…' : sample
+    }
+  })
+}
+
+/**
+ * Match source columns onto applicant fields by name. Compares each column's
+ * label *and* its raw value against every field's key, label and aliases, so
+ * it works for CSV headers ("Talk Title") and Fluent Forms keys ("names")
+ * alike. Unmatched fields map to '' — the "ignore" sentinel. Note '' is used
+ * rather than -1 because CSV column index 0 is itself a valid target.
+ */
+export function autoMapColumns (sourceColumns) {
   const mapping = {}
+  const taken = {}
 
   IMPORT_FIELDS.forEach(field => {
-    const candidates = [field.key, normalize(field.label)].concat(field.aliases || [])
-    let index = -1
+    const candidates = [field.key, field.label].concat(field.aliases || []).map(normalize)
+    let match = ''
 
-    for (let i = 0; i < candidates.length && index === -1; i++) {
-      index = normalized.indexOf(normalize(candidates[i]))
+    for (let i = 0; i < sourceColumns.length && match === ''; i++) {
+      const column = sourceColumns[i]
+
+      if (taken[String(column.value)]) {
+        continue
+      }
+
+      const identifiers = [normalize(column.label), normalize(column.value)]
+
+      if (identifiers.some(id => id !== '' && candidates.indexOf(id) > -1)) {
+        match = column.value
+        taken[String(column.value)] = true
+      }
     }
 
-    mapping[field.key] = index
+    mapping[field.key] = match
   })
 
   return mapping
 }
 
 /**
- * Turn parsed rows into column => value objects using the given mapping.
+ * Turn parsed CSV rows into column => value objects using the given mapping.
  */
 export function applyMapping (rows, mapping) {
   return rows.map(cells => {
@@ -135,7 +167,8 @@ export function applyMapping (rows, mapping) {
 
     IMPORT_FIELDS.forEach(field => {
       const index = mapping[field.key]
-      record[field.key] = index > -1 && cells[index] !== undefined ? String(cells[index]).trim() : ''
+      const hasValue = index !== '' && index !== undefined && cells[index] !== undefined
+      record[field.key] = hasValue ? String(cells[index]).trim() : ''
     })
 
     return record
