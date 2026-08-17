@@ -1,0 +1,170 @@
+// App shell, typography, page header, toolbar
+
+.eso-app {
+    font-family: $eso-font;
+    color: var(--eso-text);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: var(--eso-s5) var(--eso-s5) var(--eso-s6);
+    max-width: 1440px;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        margin: 0;
+        color: var(--eso-text);
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    h1 {
+        font-size: 23px;
+    }
+
+    h2 {
+        font-size: 18px;
+    }
+
+    h3 {
+        font-size: 15px;
+    }
+
+    h4 {
+        font-size: 13px;
+    }
+
+    p {
+        margin: 0;
+    }
+
+    ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    a {
+        color: var(--eso-blue);
+        text-decoration: none;
+        transition: color 0.15s ease;
+
+        &:hover,
+        &:focus {
+            color: var(--eso-blue-hover);
+        }
+    }
+
+    @media screen and (max-width: 782px) {
+        padding: var(--eso-s4) var(--eso-s3) var(--eso-s5);
+    }
+}
+
+// Page header ---------------------------------------------------------------
+
+.eso-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--eso-s4);
+    flex-wrap: wrap;
+    margin-bottom: var(--eso-s5);
+}
+
+.eso-page-header__text {
+    min-width: 0;
+}
+
+.eso-page-header__breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--eso-s1);
+    font-size: 13px;
+    color: var(--eso-text-muted);
+    margin-bottom: var(--eso-s1);
+
+    a {
+        color: var(--eso-text-secondary);
+
+        &:hover {
+            color: var(--eso-blue);
+        }
+    }
+}
+
+.eso-page-header__title {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s3);
+}
+
+.eso-page-header__subtitle {
+    margin-top: var(--eso-s1);
+    font-size: 13px;
+    color: var(--eso-text-muted);
+}
+
+.eso-page-header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    flex-wrap: wrap;
+}
+
+// Toolbar -------------------------------------------------------------------
+
+.eso-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    flex-wrap: wrap;
+    padding: var(--eso-s3) var(--eso-s4);
+    margin-bottom: var(--eso-s4);
+    background: var(--eso-surface);
+    border: 1px solid var(--eso-border);
+    border-radius: var(--eso-radius-card);
+    box-shadow: var(--eso-shadow);
+}
+
+.eso-toolbar__search {
+    width: 260px;
+    max-width: 100%;
+}
+
+.eso-toolbar__sort {
+    width: 170px;
+}
+
+.eso-toolbar__spacer {
+    flex: 1 1 auto;
+}
+
+.eso-toolbar__count {
+    font-size: 13px;
+    color: var(--eso-text-muted);
+    white-space: nowrap;
+}
+
+// Section separation --------------------------------------------------------
+
+.eso-section {
+    margin-bottom: var(--eso-s5);
+}
+
+.eso-section__title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--eso-text-muted);
+    margin-bottom: var(--eso-s3);
+}

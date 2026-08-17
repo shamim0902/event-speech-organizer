@@ -1,0 +1,500 @@
+// Reusable UI primitives
+
+// Card grid -----------------------------------------------------------------
+
+.eso-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--eso-s4);
+}
+
+.eso-card-grid--wide {
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+}
+
+// Card ----------------------------------------------------------------------
+
+.eso-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--eso-surface);
+    border: 1px solid var(--eso-border);
+    border-radius: var(--eso-radius-card);
+    box-shadow: var(--eso-shadow);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    overflow: hidden;
+
+    &:hover {
+        box-shadow: var(--eso-shadow-hover);
+        border-color: #c3c4c7;
+    }
+}
+
+.eso-card--link {
+    cursor: pointer;
+
+    &:hover .eso-card__title {
+        color: var(--eso-blue);
+    }
+}
+
+.eso-card__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--eso-s3);
+    padding: var(--eso-s4);
+    border-bottom: 1px solid var(--eso-border-subtle);
+}
+
+.eso-card__header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.eso-card__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--eso-text);
+    transition: color 0.15s ease;
+    word-break: break-word;
+}
+
+.eso-card__meta {
+    font-size: 12px;
+    color: var(--eso-text-muted);
+    margin-top: 2px;
+}
+
+.eso-card__body {
+    flex: 1 1 auto;
+    padding: var(--eso-s4);
+}
+
+.eso-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--eso-s2);
+    flex-wrap: wrap;
+    padding: var(--eso-s3) var(--eso-s4);
+    border-top: 1px solid var(--eso-border-subtle);
+    background: #fbfbfc;
+}
+
+// Avatar --------------------------------------------------------------------
+
+.eso-avatar {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 50%;
+    background: var(--eso-border-subtle);
+    object-fit: cover;
+}
+
+// Meta list (contact details) -----------------------------------------------
+
+.eso-meta-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--eso-s2);
+    font-size: 13px;
+}
+
+.eso-meta-list__item {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    color: var(--eso-text-secondary);
+    min-width: 0;
+
+    i {
+        flex: 0 0 auto;
+        color: var(--eso-text-muted);
+        font-size: 14px;
+    }
+
+    a,
+    span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.eso-card__contact {
+    margin-top: var(--eso-s3);
+}
+
+// Detail list (label / value pairs that must wrap)
+
+.eso-detail-list {
+    display: grid;
+    grid-template-columns: minmax(90px, auto) 1fr;
+    gap: var(--eso-s2) var(--eso-s3);
+    margin: var(--eso-s3) 0 0;
+    font-size: 13px;
+
+    dt {
+        font-weight: 600;
+        color: var(--eso-text-muted);
+    }
+
+    dd {
+        margin: 0;
+        color: var(--eso-text-secondary);
+        overflow-wrap: anywhere;
+    }
+
+    &:first-child {
+        margin-top: 0;
+    }
+}
+
+.eso-collapse {
+    margin-top: var(--eso-s4);
+    border-top-color: var(--eso-border-subtle);
+
+    .el-collapse-item__header {
+        height: 40px;
+        line-height: 40px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--eso-text-secondary);
+        border-bottom-color: var(--eso-border-subtle);
+    }
+
+    .el-collapse-item__wrap {
+        border-bottom-color: var(--eso-border-subtle);
+    }
+
+    .el-collapse-item__content {
+        padding-bottom: var(--eso-s4);
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--eso-text-secondary);
+    }
+}
+
+// Badge ---------------------------------------------------------------------
+
+.eso-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--eso-s1);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-transform: capitalize;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    background: var(--eso-border-subtle);
+    color: var(--eso-text-secondary);
+}
+
+// Applicant statuses
+.eso-badge--approved {
+    background: #edfaef;
+    border-color: #b8e6c1;
+    color: #007017;
+}
+
+.eso-badge--waiting {
+    background: #fcf9e8;
+    border-color: #f0e2a8;
+    color: #8a6800;
+}
+
+.eso-badge--rejected {
+    background: #fcf0f1;
+    border-color: #f3c0c1;
+    color: #b32d2e;
+}
+
+// Talk types
+.eso-badge--panel {
+    background: #f2ecfb;
+    border-color: #d9c8f2;
+    color: #6b3fa0;
+}
+
+.eso-badge--keynote {
+    background: #fef3e8;
+    border-color: #f6d4b0;
+    color: #a35b00;
+}
+
+.eso-badge--semi-keynote {
+    background: #fdf4e6;
+    border-color: #eddaba;
+    color: #8a6a2f;
+}
+
+.eso-badge--lightning {
+    background: #edfaef;
+    border-color: #b8e6c1;
+    color: #007017;
+}
+
+.eso-badge--break {
+    background: #f0f0f1;
+    border-color: #dcdcde;
+    color: #50575e;
+}
+
+.eso-badge--count {
+    min-width: 20px;
+    justify-content: center;
+    text-transform: none;
+    background: var(--eso-border-subtle);
+    color: var(--eso-text-muted);
+    border-color: transparent;
+}
+
+// Chips (assigned speakers) -------------------------------------------------
+
+.eso-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--eso-s1);
+}
+
+.eso-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--eso-radius);
+    background: #f6f7f7;
+    border: 1px solid var(--eso-border);
+    font-size: 12px;
+    color: var(--eso-text-secondary);
+}
+
+// Tabs ----------------------------------------------------------------------
+
+.eso-tabs {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s1);
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--eso-border);
+}
+
+.eso-tabs--sub {
+    border-bottom: none;
+    gap: var(--eso-s1);
+    margin-top: var(--eso-s3);
+}
+
+.eso-tabs__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    padding: var(--eso-s2) var(--eso-s3);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--eso-text-secondary);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+        color: var(--eso-blue);
+    }
+
+    &.is-active {
+        color: var(--eso-blue);
+        border-bottom-color: var(--eso-blue);
+        font-weight: 600;
+    }
+}
+
+.eso-tabs--sub .eso-tabs__item {
+    border: 1px solid var(--eso-border);
+    border-radius: 20px;
+    margin-bottom: 0;
+    padding: var(--eso-s1) var(--eso-s3);
+    font-size: 13px;
+    background: var(--eso-surface);
+
+    &.is-active {
+        background: var(--eso-blue);
+        border-color: var(--eso-blue);
+        color: #fff;
+
+        .eso-badge--count {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+    }
+}
+
+.eso-nav {
+    margin-bottom: var(--eso-s5);
+}
+
+// Stat tiles ----------------------------------------------------------------
+
+.eso-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--eso-s3);
+}
+
+.eso-stat {
+    padding: var(--eso-s3) var(--eso-s4);
+    background: var(--eso-surface);
+    border: 1px solid var(--eso-border);
+    border-radius: var(--eso-radius-card);
+    box-shadow: var(--eso-shadow);
+}
+
+.eso-stat--total {
+    background: #f6f7f7;
+}
+
+.eso-stat__value {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--eso-text);
+}
+
+.eso-stat__label {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--eso-text-muted);
+}
+
+// Empty state ---------------------------------------------------------------
+
+.eso-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--eso-s6) var(--eso-s5);
+    background: var(--eso-surface);
+    border: 1px dashed var(--eso-border);
+    border-radius: var(--eso-radius-card);
+}
+
+.eso-empty__icon {
+    font-size: 34px;
+    color: #c3c4c7;
+    margin-bottom: var(--eso-s3);
+}
+
+.eso-empty__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--eso-text);
+}
+
+.eso-empty__hint {
+    margin-top: var(--eso-s1);
+    font-size: 13px;
+    color: var(--eso-text-muted);
+    max-width: 420px;
+}
+
+.eso-empty__action {
+    margin-top: var(--eso-s4);
+}
+
+// Timeline (slots) ----------------------------------------------------------
+
+.eso-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: var(--eso-s3);
+}
+
+.eso-timeline__row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--eso-s4);
+}
+
+.eso-timeline__time {
+    flex: 0 0 96px;
+    padding-top: var(--eso-s4);
+    text-align: right;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--eso-text-muted);
+    line-height: 1.6;
+}
+
+.eso-timeline__time strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--eso-text);
+}
+
+.eso-timeline__card {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+@media screen and (max-width: 782px) {
+    .eso-timeline__row {
+        flex-direction: column;
+        gap: var(--eso-s1);
+    }
+
+    .eso-timeline__time {
+        flex: none;
+        text-align: left;
+        padding-top: 0;
+    }
+}
+
+// Inline actions ------------------------------------------------------------
+
+.eso-link-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    font-size: 13px;
+}
+
+.eso-link-btn {
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--eso-blue);
+
+    &:hover {
+        color: var(--eso-blue-hover);
+    }
+}
+
+.eso-link-btn--danger {
+    color: var(--eso-red);
+
+    &:hover {
+        color: #b32d2e;
+    }
+}
+
+// Two-column page layout ----------------------------------------------------
+
+.eso-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: var(--eso-s5);
+    align-items: start;
+}
+
+@media screen and (max-width: 1100px) {
+    .eso-columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

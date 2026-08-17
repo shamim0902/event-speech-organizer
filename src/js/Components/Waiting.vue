@@ -1,39 +1,21 @@
 <template>
-    <div>
-        <filter-nav></filter-nav>
-        <speaker @fetch="fetch" :eventSpeechOrganizer="eventSpeechOrganizer"></speaker>
-    </div>
+  <speaker
+    @fetch="fetch"
+    :loading="loading"
+    :eventSpeechOrganizer="eventSpeechOrganizer"
+  ></speaker>
 </template>
+
 <script>
-import Speaker from './Speaker.vue'
-import FilterNav from './FilterNav.vue'
+import applicantListMixin from './applicantListMixin'
+
 export default {
-    name: 'Waiting',
-    data() {
-        return {
-            eventSpeechOrganizer: [],
-        }
-    },
-    components: {
-        Speaker,
-        FilterNav
-    },
-    methods: {
-        fetch() {
-            this.$get({
-                action: 'event_speech_organizer_admin_ajax',
-                route: 'get_data',
-                options: {
-                    status: ['waiting']
-                }
-            }).then(response => {
-                this.eventSpeechOrganizer = response.data
-            })
-        }
-    },
-    mounted() {
-        this.fetch()
-    },
+  name: 'Waiting',
+  mixins: [applicantListMixin],
+  computed: {
+    statusFilter () {
+      return ['waiting']
+    }
+  }
 }
 </script>
-

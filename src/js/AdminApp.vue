@@ -1,8 +1,11 @@
 <template>
-  <div>
-    <router-view>
-    </router-view>
+  <div class="eso-app">
+    <router-view></router-view>
   </div>
 </template>
 
-<script></script>
+<script>
+export default {
+  name: 'AdminApp'
+}
+</script>

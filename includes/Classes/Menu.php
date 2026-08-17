@@ -20,7 +20,7 @@ class Menu
 
         $title = __('Events', 'textdomain');
         global $submenu;
-        add_menu_page(
+        $hook = add_menu_page(
             $title,
             $title,
             $menuPermission,
@@ -29,6 +29,8 @@ class Menu
             'dashicons-admin-site',
             25
         );
+
+        add_action('load-' . $hook, array($this, 'prepareScreen'));
 
         $submenu['event_speech_organizer.php']['applicants'] = array(
             __('My events', 'textdomain'),
@@ -50,6 +52,31 @@ class Menu
         //     $menuPermission,
         //     'admin.php?page=event_speech_organizer.php#/rejected',
         // );
+    }
+
+    /**
+     * This screen is a self-contained Vue app that owns the whole viewport, so
+     * nothing else should render above it inside #wpbody-content — no third
+     * party admin notices, no screen-meta panel.
+     *
+     * Runs on load-{$hook}, which fires after admin_init (so other plugins have
+     * already registered their notices) but before admin-header.php prints them.
+     * Scoped to this page only; every other admin screen is untouched.
+     */
+    public function prepareScreen()
+    {
+        remove_all_actions('admin_notices');
+        remove_all_actions('all_admin_notices');
+        remove_all_actions('network_admin_notices');
+        remove_all_actions('user_admin_notices');
+
+        // Drops the "Screen Options" / "Help" tabs, leaving #screen-meta empty.
+        add_filter('screen_options_show_screen', '__return_false');
+
+        $screen = get_current_screen();
+        if ($screen) {
+            $screen->remove_help_tabs();
+        }
     }
 
     public function enqueueAssets()
@@ -75,7 +102,12 @@ class Menu
         );
 
         //enque css file
-        wp_enqueue_style('event-speech-organizer_admin_css', EVENT_SPEECH_ORGANIZER_URL . 'assets/css/element.css');
+        wp_enqueue_style(
+            'event-speech-organizer_admin_css',
+            EVENT_SPEECH_ORGANIZER_URL . 'assets/css/element.css',
+            array(),
+            EVENT_SPEECH_ORGANIZER_VERSION
+        );
 
         $eventSpeechOrganizer = apply_filters('event_speech_organizer/admin_app_vars', array(
             //'image_upload_url' => admin_url('admin-ajax.php?action=wpf_global_settings_handler&route=wpf_upload_image'),

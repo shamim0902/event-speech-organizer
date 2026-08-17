@@ -1,0 +1,87 @@
+// Touch-ups Element UI's theme variables can't reach.
+// These are intentionally global: Element renders dialogs/messages/popovers
+// at document body level, outside .eso-app.
+
+.el-dialog {
+    border-radius: $eso-radius-card;
+    overflow: hidden;
+}
+
+.el-dialog__header {
+    padding: 16px 24px;
+    border-bottom: 1px solid $eso-border-subtle;
+
+    .el-dialog__title {
+        font-size: 16px;
+        font-weight: 600;
+        color: $eso-text;
+    }
+}
+
+.el-dialog__body {
+    padding: 24px;
+    color: $eso-text-secondary;
+}
+
+.el-dialog__footer {
+    padding: 14px 24px;
+    border-top: 1px solid $eso-border-subtle;
+    background: #fbfbfc;
+}
+
+.el-form-item__label {
+    font-weight: 500;
+    color: $eso-text-secondary;
+    line-height: 1.4;
+    padding-bottom: 4px;
+}
+
+.el-message-box {
+    border-radius: $eso-radius-card;
+}
+
+.el-message {
+    border-radius: $eso-radius;
+}
+
+// Full-width form controls (dialogs render outside .eso-app, so this is global)
+.eso-full-width {
+    width: 100%;
+
+    .el-input,
+    .el-input__inner {
+        width: 100%;
+    }
+}
+
+// Dialog form sections
+.eso-form-section {
+    margin-bottom: 24px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.eso-form-section__title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $eso-text-muted;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid $eso-border-subtle;
+}
+
+// Keep dialogs usable on narrow screens
+@media screen and (max-width: 782px) {
+    .el-dialog {
+        width: 94% !important;
+        margin-top: 24px !important;
+    }
+
+    .el-dialog__body {
+        padding: 16px;
+    }
+}

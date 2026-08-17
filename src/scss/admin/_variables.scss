@@ -1,0 +1,74 @@
+// Design tokens — WP-native modern
+// SCSS vars feed Element UI's theme-chalk source; the CSS custom properties
+// below are what our own component styles consume.
+
+// Palette
+$eso-blue: #2271b1;
+$eso-blue-hover: #135e96;
+$eso-green: #00a32a;
+$eso-yellow: #dba617;
+$eso-red: #d63638;
+$eso-grey: #787c82;
+
+$eso-text: #1d2327;
+$eso-text-secondary: #50575e;
+$eso-text-muted: #787c82;
+
+$eso-surface: #ffffff;
+$eso-bg: #f0f0f1;
+$eso-border: #dcdcde;
+$eso-border-subtle: #f0f0f1;
+
+$eso-radius: 4px;
+$eso-radius-card: 6px;
+
+$eso-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+// Element UI theme overrides (must precede the theme-chalk source import)
+$--color-primary: $eso-blue;
+$--color-success: $eso-green;
+$--color-warning: $eso-yellow;
+$--color-danger: $eso-red;
+$--color-info: $eso-grey;
+
+$--color-text-primary: $eso-text;
+$--color-text-regular: $eso-text-secondary;
+$--color-text-secondary: $eso-text-muted;
+
+$--border-color-base: $eso-border;
+$--border-radius-base: $eso-radius;
+$--font-path: '~element-ui/lib/theme-chalk/fonts';
+
+$--font-family: $eso-font;
+
+.eso-app {
+    --eso-blue: #{$eso-blue};
+    --eso-blue-hover: #{$eso-blue-hover};
+    --eso-green: #{$eso-green};
+    --eso-yellow: #{$eso-yellow};
+    --eso-red: #{$eso-red};
+    --eso-grey: #{$eso-grey};
+
+    --eso-text: #{$eso-text};
+    --eso-text-secondary: #{$eso-text-secondary};
+    --eso-text-muted: #{$eso-text-muted};
+
+    --eso-surface: #{$eso-surface};
+    --eso-bg: #{$eso-bg};
+    --eso-border: #{$eso-border};
+    --eso-border-subtle: #{$eso-border-subtle};
+
+    --eso-radius: #{$eso-radius};
+    --eso-radius-card: #{$eso-radius-card};
+
+    --eso-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --eso-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.1);
+
+    // Spacing scale
+    --eso-s1: 4px;
+    --eso-s2: 8px;
+    --eso-s3: 12px;
+    --eso-s4: 16px;
+    --eso-s5: 24px;
+    --eso-s6: 32px;
+}
