@@ -15,11 +15,17 @@ export default {
       loading: false
     }
   },
+  computed: {
+    eventId () {
+      return this.$route.params.id
+    }
+  },
   methods: {
     fetch () {
       const request = {
         action: 'event_speech_organizer_admin_ajax',
-        route: 'get_data'
+        route: 'get_data',
+        event_id: this.eventId
       }
 
       if (this.statusFilter && this.statusFilter.length) {
@@ -35,6 +41,13 @@ export default {
         .always(() => {
           this.loading = false
         })
+    }
+  },
+  watch: {
+    // vue-router reuses the component when only :id changes, so mounted()
+    // will not fire again — refetch explicitly.
+    eventId () {
+      this.fetch()
     }
   },
   mounted () {

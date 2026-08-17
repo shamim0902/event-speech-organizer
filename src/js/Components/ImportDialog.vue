@@ -249,6 +249,11 @@ export default {
     visible: {
       type: Boolean,
       default: false
+    },
+    // Imported applicants belong to the event whose screen we are on.
+    eventId: {
+      type: [String, Number],
+      required: true
     }
   },
   data () {
@@ -491,6 +496,7 @@ export default {
         action: 'event_speech_organizer_admin_ajax',
         route: 'import_applicants',
         nonce: window.eventSpeechOrganizerAdmin.nonce,
+        event_id: this.eventId,
         rows: JSON.stringify(batch)
       })
         .then(response => {
@@ -517,6 +523,7 @@ export default {
         action: 'event_speech_organizer_admin_ajax',
         route: 'fluentform_import',
         nonce: window.eventSpeechOrganizerAdmin.nonce,
+        event_id: this.eventId,
         form_id: this.selectedForm,
         mapping: JSON.stringify(this.mapping),
         offset: offset,

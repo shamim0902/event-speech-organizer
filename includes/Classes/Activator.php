@@ -33,16 +33,128 @@ class Activator
         }
     }
 
+    /**
+     * Bumped whenever the schema changes so existing installs upgrade.
+     * @see Activator::maybeUpgrade()
+     */
+    const DB_VERSION = '2';
+
+    const DB_VERSION_OPTION = 'event_speech_organizer_db_version';
+
+    /**
+     * Runs on every load. Cheap when the schema is current: one option read.
+     */
+    public static function maybeUpgrade()
+    {
+        if (get_option(self::DB_VERSION_OPTION) === self::DB_VERSION) {
+            return;
+        }
+
+        (new self())->migrateDatabases(false);
+    }
+
     private function migrate()
     {
-        /*
-        * database creation commented out,
-        * If you need any database just active this function bellow
-        * and write your own query at createApplicantTable function
-        */
-
         $this->createApplicantTable();
         $this->slotTable();
+        $this->createEventTable();
+
+        // Applicants and slots used to be global. Scope them to an event.
+        $this->addColumnIfMissing($GLOBALS['wpdb']->prefix . 'speakers', 'event_id');
+        $this->addColumnIfMissing($GLOBALS['wpdb']->prefix . 'speakers_slots', 'event_id');
+
+        $this->seedDefaultEvent();
+
+        update_option(self::DB_VERSION_OPTION, self::DB_VERSION);
+    }
+
+    public function createEventTable()
+    {
+        global $wpdb;
+        $charset_collate = $wpdb->get_charset_collate();
+        $table_name = $wpdb->prefix . 'speaker_events';
+
+        $sql = "CREATE TABLE $table_name (
+            `id` int NOT NULL AUTO_INCREMENT,
+            `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+            `description` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+            `location` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+            `event_date` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+            `status` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+            `created_at` datetime NULL,
+            PRIMARY KEY (`id`)
+        ) $charset_collate;";
+
+        $this->runSQL($sql, $table_name);
+    }
+
+    /**
+     * dbDelta is not used for this: runSQL() only fires on table creation, and
+     * dbDelta is unreliable against the slots table because `from` and `to`
+     * are reserved words. An explicit guarded ALTER is predictable.
+     */
+    private function addColumnIfMissing($tableName, $column)
+    {
+        global $wpdb;
+
+        if ($wpdb->get_var("SHOW TABLES LIKE '$tableName'") != $tableName) {
+            return;
+        }
+
+        $exists = $wpdb->get_var(
+            $wpdb->prepare("SHOW COLUMNS FROM `$tableName` LIKE %s", $column)
+        );
+
+        if ($exists) {
+            return;
+        }
+
+        $wpdb->query("ALTER TABLE `$tableName` ADD `$column` INT NOT NULL DEFAULT 0");
+        $wpdb->query("ALTER TABLE `$tableName` ADD INDEX `$column` (`$column`)");
+    }
+
+    /**
+     * Existing applicants and slots predate events. Rather than leaving them
+     * orphaned — and therefore invisible in an event-scoped UI — park them
+     * under one default event.
+     */
+    private function seedDefaultEvent()
+    {
+        global $wpdb;
+
+        $eventsTable = $wpdb->prefix . 'speaker_events';
+        $speakersTable = $wpdb->prefix . 'speakers';
+        $slotsTable = $wpdb->prefix . 'speakers_slots';
+
+        if ((int) $wpdb->get_var("SELECT COUNT(*) FROM $eventsTable") > 0) {
+            return;
+        }
+
+        $orphanedSpeakers = (int) $wpdb->get_var("SELECT COUNT(*) FROM $speakersTable WHERE event_id = 0");
+        $orphanedSlots = (int) $wpdb->get_var("SELECT COUNT(*) FROM $slotsTable WHERE event_id = 0");
+
+        // A fresh install has nothing to rescue; let the user create their own.
+        if (!$orphanedSpeakers && !$orphanedSlots) {
+            return;
+        }
+
+        $wpdb->insert($eventsTable, array(
+            'title'       => __('Default Event', 'textdomain'),
+            'description' => __('Applicants and slots that existed before events were introduced.', 'textdomain'),
+            'location'    => '',
+            'event_date'  => '',
+            'status'      => 'active',
+            'created_at'  => current_time('mysql'),
+        ));
+
+        $eventId = (int) $wpdb->insert_id;
+
+        if (!$eventId) {
+            return;
+        }
+
+        $wpdb->query($wpdb->prepare("UPDATE $speakersTable SET event_id = %d WHERE event_id = 0", $eventId));
+        $wpdb->query($wpdb->prepare("UPDATE $slotsTable SET event_id = %d WHERE event_id = 0", $eventId));
     }
 
     public function slotTable()

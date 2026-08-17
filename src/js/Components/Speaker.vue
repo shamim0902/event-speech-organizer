@@ -186,6 +186,7 @@
 
     <import-dialog
       :visible="importModal"
+      :event-id="eventId"
       @close="importModal = false"
       @imported="onImported"
     />
@@ -371,6 +372,9 @@ export default {
     }
   },
   computed: {
+    eventId () {
+      return this.$route.params.id
+    },
     dialogTitle () {
       return this.speakerNew.id ? 'Edit applicant' : 'Add applicant'
     },
@@ -439,6 +443,7 @@ export default {
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
         route: isUpdate ? 'edit_applicant' : 'add_applicant',
+        event_id: this.eventId,
         data: this.speakerNew
       }).then(() => {
         this.speakerModal = false
@@ -477,6 +482,7 @@ export default {
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
         route: 'update_status',
+        event_id: this.eventId,
         options: {
           id: speaker.id,
           status: status

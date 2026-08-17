@@ -46,6 +46,10 @@ if (!defined('EVENT_SPEECH_ORGANIZER_VERSION')) {
         {
             require_once EVENT_SPEECH_ORGANIZER_DIR . 'includes/autoload.php';
 
+            // Activation only fires on a fresh install, so schema changes for
+            // existing installs need their own upgrade path.
+            \EventSpeechOrganizer\Classes\Activator::maybeUpgrade();
+
             if (is_admin()) {
                 $this->adminHooks();
             }

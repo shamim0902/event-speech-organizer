@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 }
 
 use EventSpeechOrganizer\Classes\ApplicantModel;
+use EventSpeechOrganizer\Classes\EventModel;
 use FluentForm\App\Http\Controllers\IntegrationManagerController;
 use FluentForm\Framework\Helpers\ArrayHelper as Arr;
 
@@ -93,6 +94,7 @@ class FluentFormIntegration extends IntegrationManagerController
     {
         $defaults = array(
             'name'         => __('Event Speech Organizer Feed', 'textdomain'),
+            'event_id'     => '',
             'CustomFields' => (object) array(),
             'conditionals' => array(
                 'conditions' => array(),
@@ -140,6 +142,15 @@ class FluentFormIntegration extends IntegrationManagerController
                     'required'    => true,
                     'placeholder' => __('Your Feed Name', 'textdomain'),
                     'component'   => 'text',
+                ),
+                array(
+                    'key'         => 'event_id',
+                    'label'       => __('Event', 'textdomain'),
+                    'placeholder' => __('Select an event', 'textdomain'),
+                    'required'    => true,
+                    'tips'        => __('Applicants created by this feed are added to this event.', 'textdomain'),
+                    'component'   => 'select',
+                    'options'     => $this->getEventOptions(),
                 ),
                 array(
                     'key'                => 'CustomFields',
@@ -203,9 +214,22 @@ class FluentFormIntegration extends IntegrationManagerController
             return;
         }
 
+        $eventId = (int) Arr::get($feedData, 'event_id');
+
+        // The event could have been deleted since the feed was configured.
+        if (!$eventId || !(new EventModel())->exists($eventId)) {
+            do_action(
+                'fluentform/integration_action_result',
+                $feed,
+                'failed',
+                __('Event Speech Organizer feed skipped: the selected event no longer exists.', 'textdomain')
+            );
+            return;
+        }
+
         // Reuses the import path, so this shares the CSV/Fluent Forms importer's
         // email de-duplication, validation, truncation and sanitisation.
-        $result = (new ApplicantModel())->importRows(array($row), 1);
+        $result = (new ApplicantModel())->importRows(array($row), 1, $eventId);
 
         if (!empty($result['imported'])) {
             do_action(
@@ -243,6 +267,25 @@ class FluentFormIntegration extends IntegrationManagerController
                 $reason
             )
         );
+    }
+
+    /**
+     * Events available to the feed's event picker, as value => label.
+     */
+    private function getEventOptions()
+    {
+        $events = (new EventModel())->get();
+        $options = array();
+
+        foreach (Arr::get($events, 'data', array()) as $event) {
+            $options[(string) $event->id] = $event->title;
+        }
+
+        if (!$options) {
+            $options[''] = __('No events yet — create one in Events first', 'textdomain');
+        }
+
+        return $options;
     }
 
     /**

@@ -2,7 +2,7 @@
   <div>
     <page-header
       :title="eventTitle"
-      subtitle="Review speaker applications and build the schedule."
+      :subtitle="subtitle"
       :back-to="{ name: 'events' }"
       back-label="All events"
     />
@@ -25,6 +25,7 @@ export default {
   },
   data () {
     return {
+      event: null,
       counts: {
         total: 0,
         approved: 0,
@@ -34,15 +35,45 @@ export default {
     }
   },
   computed: {
+    eventId () {
+      return this.$route.params.id
+    },
     eventTitle () {
-      return 'Event ' + this.$route.params.id
+      return this.event ? this.event.title : 'Loading…'
+    },
+    subtitle () {
+      if (!this.event) {
+        return ''
+      }
+
+      const parts = []
+      if (this.event.event_date) {
+        parts.push(this.event.event_date)
+      }
+      if (this.event.location) {
+        parts.push(this.event.location)
+      }
+
+      return parts.length
+        ? parts.join(' · ')
+        : 'Review speaker applications and build the schedule.'
     }
   },
   methods: {
+    fetchEvent () {
+      this.$get({
+        action: 'event_speech_organizer_admin_ajax',
+        route: 'get_events'
+      }).then(response => {
+        const events = (response && response.data) || []
+        this.event = events.find(item => String(item.id) === String(this.eventId)) || null
+      })
+    },
     fetchCounts () {
       this.$get({
         action: 'event_speech_organizer_admin_ajax',
-        route: 'get_data'
+        route: 'get_data',
+        event_id: this.eventId
       }).then(response => {
         const applicants = (response && response.data) || []
         const counts = {
@@ -61,10 +92,20 @@ export default {
 
         this.counts = counts
       })
+    },
+    refresh () {
+      this.fetchEvent()
+      this.fetchCounts()
+    }
+  },
+  watch: {
+    // Switching events without leaving the dashboard must re-scope everything.
+    eventId () {
+      this.refresh()
     }
   },
   mounted () {
-    this.fetchCounts()
+    this.refresh()
     window.eventSpeechOrganizerBus.$on('applicants-updated', this.fetchCounts)
   },
   beforeDestroy () {

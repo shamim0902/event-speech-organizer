@@ -261,10 +261,13 @@ export default {
         }
       ],
       slots: [],
-      speakers: window.eventSpeechOrganizerAdmin.speakers || []
+      speakers: []
     }
   },
   computed: {
+    eventId () {
+      return this.$route.params.id
+    },
     dialogTitle () {
       return this.form.id ? 'Edit slot' : 'Add slot'
     },
@@ -316,6 +319,7 @@ export default {
       this.$get({
         action: 'event_speech_organizer_admin_ajax',
         route: 'search_speakers',
+        event_id: this.eventId,
         search_by: queryString
       }).then(response => {
         cb(response || [])
@@ -331,6 +335,7 @@ export default {
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
         route: 'save_slots',
+        event_id: this.eventId,
         data: this.form
       }).then(() => {
         this.dialogVisible = false
@@ -359,6 +364,7 @@ export default {
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
         route: 'delete_slot',
+        event_id: this.eventId,
         id: slot.id
       }).then(() => {
         this.$message.success('Slot deleted.')
@@ -371,11 +377,21 @@ export default {
       this.form = Object.assign({}, slot, { speakers: slot.speakers || [] })
       this.dialogVisible = true
     },
+    fetchSpeakers () {
+      this.$get({
+        action: 'event_speech_organizer_admin_ajax',
+        route: 'get_data',
+        event_id: this.eventId
+      }).then(response => {
+        this.speakers = (response && response.data) || []
+      })
+    },
     fetch () {
       this.loading = true
       this.$get({
         action: 'event_speech_organizer_admin_ajax',
-        route: 'get_slots'
+        route: 'get_slots',
+        event_id: this.eventId
       })
         .then(response => {
           this.slots = (response && response.data) || []
@@ -385,8 +401,15 @@ export default {
         })
     }
   },
+  watch: {
+    eventId () {
+      this.fetch()
+      this.fetchSpeakers()
+    }
+  },
   mounted () {
     this.fetch()
+    this.fetchSpeakers()
   }
 }
 </script>

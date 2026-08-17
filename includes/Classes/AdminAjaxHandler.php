@@ -29,6 +29,9 @@ class AdminAjaxHandler
             'fluentform_forms' => 'fluentFormForms',
             'fluentform_columns' => 'fluentFormColumns',
             'fluentform_import' => 'fluentFormImport',
+            'get_events' => 'getEvents',
+            'save_event' => 'saveEvent',
+            'delete_event' => 'deleteEvent',
         );
 
         if (isset($validRoutes[$route])) {
@@ -36,6 +39,58 @@ class AdminAjaxHandler
             return $this->{$validRoutes[$route]}();
         }
         do_action('event_speech_organizer/admin_ajax_handler_catch', $route);
+    }
+
+    /**
+     * The event every applicant/slot route is scoped to.
+     */
+    private function currentEventId()
+    {
+        return isset($_REQUEST['event_id']) ? absint($_REQUEST['event_id']) : 0;
+    }
+
+    private function requireEventId()
+    {
+        $eventId = $this->currentEventId();
+
+        if (!$eventId || !(new EventModel())->exists($eventId)) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('A valid event is required.', 'textdomain'),
+            ), 400);
+        }
+
+        return $eventId;
+    }
+
+    public function getEvents()
+    {
+        wp_send_json((new EventModel())->get());
+    }
+
+    public function saveEvent()
+    {
+        $this->guardImportRequest();
+
+        $event = isset($_REQUEST['data']) ? (array) wp_unslash($_REQUEST['data']) : array();
+
+        $model = new EventModel();
+
+        $result = empty($event['id']) ? $model->insert($event) : $model->update($event);
+
+        wp_send_json($result, empty($result['status']) ? 400 : 200);
+    }
+
+    public function deleteEvent()
+    {
+        $this->guardImportRequest();
+
+        $id = isset($_REQUEST['id']) ? absint($_REQUEST['id']) : 0;
+        $withContent = !empty($_REQUEST['with_content']) && 'false' !== $_REQUEST['with_content'];
+
+        $result = (new EventModel())->delete($id, $withContent);
+
+        wp_send_json($result, empty($result['status']) ? 400 : 200);
     }
 
     /**
@@ -51,6 +106,7 @@ class AdminAjaxHandler
     public function importApplicants()
     {
         $this->guardImportRequest();
+        $eventId = $this->requireEventId();
 
         $raw = isset($_REQUEST['rows']) ? wp_unslash($_REQUEST['rows']) : '';
         $rows = json_decode($raw, true);
@@ -64,7 +120,7 @@ class AdminAjaxHandler
 
         $applicantModel = new ApplicantModel();
 
-        wp_send_json($applicantModel->importRows($rows));
+        wp_send_json($applicantModel->importRows($rows, 2, $eventId));
     }
 
     /**
@@ -142,6 +198,7 @@ class AdminAjaxHandler
     public function fluentFormImport()
     {
         $this->guardFluentForm();
+        $eventId = $this->requireEventId();
 
         $formId = isset($_REQUEST['form_id']) ? absint($_REQUEST['form_id']) : 0;
         $offset = isset($_REQUEST['offset']) ? absint($_REQUEST['offset']) : 0;
@@ -174,7 +231,7 @@ class AdminAjaxHandler
 
         $applicantModel = new ApplicantModel();
         // Report the 1-based submission position within the form, not the slice.
-        $result = $applicantModel->importRows($rows, $offset + 1);
+        $result = $applicantModel->importRows($rows, $offset + 1, $eventId);
         $result['processed'] = count($rows);
 
         wp_send_json($result);
@@ -182,68 +239,71 @@ class AdminAjaxHandler
 
     public function editApplicant()
     {
-        $applicant = $_REQUEST['data'];
-        $applicantModel = new ApplicantModel();
-        $applicantModel->update($applicant);
-    }
+        $applicant = isset($_REQUEST['data']) ? (array) wp_unslash($_REQUEST['data']) : array();
 
+        (new ApplicantModel())->update($applicant);
+
+        wp_send_json(array('status' => true));
+    }
 
     public function addApplicant()
     {
-        $applicant = $_REQUEST['data'];
-        $applicantModel = new ApplicantModel();
-        $applicant['question'] = '';
-        $applicant['consent'] = '';
-        $applicant['ip'] = '';
+        $eventId = $this->requireEventId();
 
-        $applicantModel->insert($applicant);
+        $applicant = isset($_REQUEST['data']) ? (array) wp_unslash($_REQUEST['data']) : array();
+        $applicant['event_id'] = $eventId;
+
+        $result = (new ApplicantModel())->insert($applicant);
+
+        wp_send_json($result, empty($result['status']) ? 400 : 200);
     }
 
     public function searchSpeakers()
     {
-        $speakerModel = new ApplicantModel();
-        $eventSpeechOrganizer = $speakerModel->searchBy($_REQUEST['search_by']);
-        wp_send_json($eventSpeechOrganizer);
+        $search = isset($_REQUEST['search_by']) ? $_REQUEST['search_by'] : '';
+
+        wp_send_json((new ApplicantModel())->searchBy($search, $this->currentEventId()));
     }
 
     public function getSlots()
     {
-        $speakerModel = new SpeakerSlots();
-        $slots = $speakerModel->get();
-        wp_send_json($slots);
+        wp_send_json((new SpeakerSlots())->get($this->currentEventId()));
     }
 
     public function deleteSlot()
     {
-        $speakerModel = new SpeakerSlots();
-        $speakerModel->delete($_REQUEST['id']);
+        (new SpeakerSlots())->delete(isset($_REQUEST['id']) ? $_REQUEST['id'] : 0);
+
+        wp_send_json(array('status' => true));
     }
 
     public function saveSlots()
     {
-        $slot = $_REQUEST['data'];
-        $speakerModel = new SpeakerSlots();
+        $eventId = $this->requireEventId();
 
-        $speakers = json_encode($slot['speakers']);
+        $slot = isset($_REQUEST['data']) ? (array) wp_unslash($_REQUEST['data']) : array();
+        $slot['event_id'] = $eventId;
 
-        foreach ($slot as $key => $value) {
-            $slot[$key] = sanitize_text_field($value);
+        $slotModel = new SpeakerSlots();
+
+        if (!empty($slot['id'])) {
+            $slotModel->update($slot);
+            wp_send_json(array('status' => true, 'id' => (int) $slot['id']));
         }
 
-        $slot['speakers'] = $speakers;
+        $result = $slotModel->insert($slot);
 
-        if (isset($slot['id'])) {
-            return $speakerModel->update($slot);
-        }
-
-        $speakerModel->insert($slot);
+        wp_send_json($result, empty($result['status']) ? 400 : 200);
     }
 
     protected function getData()
     {
-        $speakerModel = new ApplicantModel();
-        $speakers = $speakerModel->get($_REQUEST);
-        wp_send_json($speakers);
+        $request = array(
+            'event_id' => $this->currentEventId(),
+            'options'  => isset($_REQUEST['options']) ? $_REQUEST['options'] : array(),
+        );
+
+        wp_send_json((new ApplicantModel())->get($request));
     }
 
     public function saveSpeaker()

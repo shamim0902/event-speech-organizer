@@ -116,7 +116,6 @@ class Menu
             'nonce' => wp_create_nonce('event_speech_organizer_admin'),
             'import_columns' => ApplicantModel::getImportableColumns(),
             'has_fluentform' => FluentFormImporter::isAvailable(),
-            'speakers' => (new ApplicantModel())->getAll(),
         ));
 
         wp_localize_script('event_speech_organizer_boot', 'eventSpeechOrganizerAdmin', $eventSpeechOrganizer);

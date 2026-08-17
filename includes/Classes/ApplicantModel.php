@@ -48,12 +48,28 @@ class ApplicantModel
      *                             the 1-based position of the slice.
      * @return array summary counts plus per-row skip reasons
      */
-    public function importRows($rows, $rowNumberBase = 2)
+    public function importRows($rows, $rowNumberBase = 2, $eventId = 0)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
 
-        $existing = array_flip($this->getExistingEmails());
+        $eventId = (int) $eventId;
+
+        // Every applicant belongs to an event; without one the rows would be
+        // written where no screen can ever show them.
+        if (!$eventId || !(new EventModel())->exists($eventId)) {
+            return array(
+                'status'     => false,
+                'message'    => __('A valid event is required to import applicants.', 'textdomain'),
+                'imported'   => 0,
+                'duplicates' => 0,
+                'invalid'    => 0,
+                'failed'     => 0,
+                'issues'     => array(),
+            );
+        }
+
+        $existing = array_flip($this->getExistingEmails($eventId));
 
         $imported = 0;
         $duplicates = 0;
@@ -92,6 +108,7 @@ class ApplicantModel
             }
 
             $data = $this->prepareImportRow($row, $name, $email);
+            $data['event_id'] = $eventId;
 
             $inserted = $wpdb->insert($table_name, $data);
 
@@ -158,66 +175,93 @@ class ApplicantModel
         return $data;
     }
 
-    public function getExistingEmails()
+    /**
+     * Emails already used within an event. De-duplication is per event, not
+     * global: the same speaker may legitimately apply to two different events.
+     */
+    public function getExistingEmails($eventId = 0)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
 
-        $emails = $wpdb->get_col("SELECT email FROM $table_name WHERE email <> ''");
+        $emails = $wpdb->get_col($wpdb->prepare(
+            "SELECT email FROM $table_name WHERE email <> '' AND event_id = %d",
+            (int) $eventId
+        ));
 
         return array_map(function ($email) {
             return strtolower(trim($email));
         }, (array) $emails);
     }
 
-    public function getAll()
+    public function getAll($eventId = 0)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
-        $sql = "SELECT * FROM $table_name";
-        return $wpdb->get_results($sql);
+
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE event_id = %d ORDER BY id DESC",
+            (int) $eventId
+        ));
     }
 
     public function get($request)
     {
-
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
-        $sql = "SELECT * FROM $table_name";
 
-        $options  = isset($_REQUEST['options']) ? $_REQUEST['options'] : array();
+        $eventId = isset($request['event_id']) ? (int) $request['event_id'] : 0;
+        $options = isset($request['options']) ? (array) $request['options'] : array();
 
-        if (isset($options['not_status'])) {
-            $exc = '';
-            foreach ($options['not_status'] as $value) {
-                $exc .= "'" . sanitize_text_field($value) . "',";
-            }
-            $exc = rtrim($exc, ",");
-            $sql .= " WHERE status NOT IN ($exc)";
+        $where = array('event_id = %d');
+        $params = array($eventId);
+
+        if (!empty($options['status'])) {
+            $statuses = array_map('sanitize_text_field', (array) $options['status']);
+            $where[] = 'status IN (' . implode(', ', array_fill(0, count($statuses), '%s')) . ')';
+            $params = array_merge($params, $statuses);
         }
 
-        if (isset($options['status'])) {
-            $List = implode(', ', $options['status']);
-            $sql .= " WHERE status IN ('" . $List . "' )";
+        if (!empty($options['not_status'])) {
+            $statuses = array_map('sanitize_text_field', (array) $options['not_status']);
+            $where[] = 'status NOT IN (' . implode(', ', array_fill(0, count($statuses), '%s')) . ')';
+            $params = array_merge($params, $statuses);
         }
 
-        $sql = rtrim($sql, "AND");
+        $sql = "SELECT * FROM $table_name WHERE " . implode(' AND ', $where) . ' ORDER BY id DESC';
 
-        $results = $wpdb->get_results($sql);
+        $results = $wpdb->get_results($wpdb->prepare($sql, $params));
 
         return array(
-            'data' => $results
+            'data' => $results ? $results : array()
         );
     }
 
-    public function searchBy($searchQuery)
+    public function searchBy($searchQuery, $eventId = 0)
     {
-        //search from data using $searchQuery
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
-        $sql = "SELECT * FROM $table_name WHERE name LIKE '%$searchQuery%' OR email LIKE '%$searchQuery%' OR phone LIKE '%$searchQuery%' OR username LIKE '%$searchQuery%' OR social LIKE '%$searchQuery%' OR type LIKE '%$searchQuery%' OR topic LIKE '%$searchQuery%' OR description LIKE '%$searchQuery%' OR cospeakers LIKE '%$searchQuery%' OR audience LIKE '%$searchQuery%' OR experience LIKE '%$searchQuery%' OR question LIKE '%$searchQuery%' OR consent LIKE '%$searchQuery%' OR ip LIKE '%$searchQuery%' Limit 10";
 
-        $results = $wpdb->get_results($sql);
+        $like = '%' . $wpdb->esc_like((string) $searchQuery) . '%';
+
+        $columns = array(
+            'name', 'email', 'phone', 'username', 'social', 'type', 'topic',
+            'description', 'cospeakers', 'audience', 'experience', 'question',
+        );
+
+        $conditions = array();
+        $params = array((int) $eventId);
+
+        foreach ($columns as $column) {
+            $conditions[] = "$column LIKE %s";
+            $params[] = $like;
+        }
+
+        $sql = "SELECT * FROM $table_name
+                WHERE event_id = %d AND (" . implode(' OR ', $conditions) . ')
+                LIMIT 10';
+
+        $results = $wpdb->get_results($wpdb->prepare($sql, $params));
 
         $suggestion = array();
         foreach ($results as $key => $value) {
@@ -251,61 +295,55 @@ class ApplicantModel
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
 
-        $data = array(
-            'name' => sanitize_text_field($speaker['name']),
-            'email' => sanitize_text_field($speaker['email']),
-            'comment' => sanitize_text_field($speaker['comment']),
-            'phone' => sanitize_text_field($speaker['phone']),
-            'username' => sanitize_text_field($speaker['username']),
-            'social' => sanitize_text_field($speaker['social']),
-            'date' => sanitize_text_field($speaker['date']),
-            'type' => sanitize_text_field($speaker['type']),
-            'topic' => sanitize_text_field($speaker['topic']),
-            'description' => esc_html($speaker['description']),
-            'status' => sanitize_text_field($speaker['status']),
-            'cospeakers' => sanitize_text_field($speaker['cospeakers']),
-            'audience' => sanitize_text_field($speaker['audience']),
-            'experience' => sanitize_text_field($speaker['experience']),
-            'question' => sanitize_text_field($speaker['question']),
-            'consent' => sanitize_text_field($speaker['consent']),
-            'ip' => sanitize_text_field($speaker['ip'])
-        );
+        $id = isset($speaker['id']) ? (int) $speaker['id'] : 0;
 
-        $where = array(
-            'id' => $speaker['id']
-        );
+        if (!$id) {
+            return;
+        }
 
-        $wpdb->update($table_name, $data, $where);
+        $wpdb->update($table_name, $this->sanitizeApplicant($speaker), array('id' => $id));
     }
 
     public function insert($speaker)
     {
         global $wpdb;
         $table_name = $wpdb->prefix . 'speakers';
-        $data = array(
-            'name' => sanitize_text_field($speaker['name']),
-            'email' => sanitize_text_field($speaker['email']),
-            'comment' => sanitize_text_field($speaker['comment']),
-            'phone' => sanitize_text_field($speaker['phone']),
-            'username' => sanitize_text_field($speaker['username']),
-            'social' => sanitize_text_field($speaker['social']),
-            'date' => sanitize_text_field($speaker['date']),
-            'type' => sanitize_text_field($speaker['type']),
-            'topic' => sanitize_text_field($speaker['topic']),
-            'description' => esc_html($speaker['description']),
-            'status' => sanitize_text_field($speaker['status']),
-            'cospeakers' => sanitize_text_field($speaker['cospeakers']),
-            'audience' => sanitize_text_field($speaker['audience']),
-            'experience' => sanitize_text_field($speaker['experience']),
-            'question' => sanitize_text_field($speaker['question']),
-            'consent' => sanitize_text_field($speaker['consent']),
-            'ip' => sanitize_text_field($speaker['ip'])
-        );
 
-        $wpdb->insert($table_name, $data);
+        $data = $this->sanitizeApplicant($speaker);
+        $data['event_id'] = isset($speaker['event_id']) ? (int) $speaker['event_id'] : 0;
 
-        if ($wpdb->last_error) {
-            dd($wpdb->last_error);
+        $inserted = $wpdb->insert($table_name, $data);
+
+        if ($inserted === false) {
+            return array('status' => false, 'message' => $wpdb->last_error);
         }
+
+        return array('status' => true, 'id' => (int) $wpdb->insert_id);
+    }
+
+    /**
+     * Shared column sanitiser. Keys are read defensively because add/edit
+     * payloads do not always carry every column.
+     */
+    private function sanitizeApplicant($speaker)
+    {
+        $data = array();
+
+        foreach (self::$importableColumns as $column => $maxLength) {
+            $value = isset($speaker[$column]) ? $speaker[$column] : '';
+            $value = is_scalar($value) ? (string) $value : '';
+
+            $data[$column] = ($maxLength === null)
+                ? sanitize_textarea_field($value)
+                : sanitize_text_field($value);
+        }
+
+        foreach (array('question', 'consent', 'ip') as $column) {
+            if (!isset($data[$column])) {
+                $data[$column] = isset($speaker[$column]) ? sanitize_text_field((string) $speaker[$column]) : '';
+            }
+        }
+
+        return $data;
     }
 }
