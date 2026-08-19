@@ -30,6 +30,10 @@ class AdminAjaxHandler
             'fluentform_columns' => 'fluentFormColumns',
             'fluentform_import' => 'fluentFormImport',
             'get_events' => 'getEvents',
+            'get_webhook_settings' => 'getWebhookSettings',
+            'regenerate_webhook_token' => 'regenerateWebhookToken',
+            'get_webhook_mapping' => 'getWebhookMapping',
+            'save_webhook_mapping' => 'saveWebhookMapping',
             'save_event' => 'saveEvent',
             'delete_event' => 'deleteEvent',
         );
@@ -66,6 +70,105 @@ class AdminAjaxHandler
     public function getEvents()
     {
         wp_send_json((new EventModel())->get());
+    }
+
+    /**
+     * Everything the settings screen shows about the incoming webhook: one
+     * URL per event. Guarded because the URLs embed the secret token that
+     * authenticates incoming webhooks.
+     */
+    public function getWebhookSettings()
+    {
+        $this->guardImportRequest();
+
+        wp_send_json(array(
+            'status' => true,
+            'events' => $this->webhookEventUrls(),
+        ));
+    }
+
+    /**
+     * Rotate the webhook secret. Old URLs stop working immediately, so the
+     * fresh URL list is returned in the same response for re-sharing.
+     */
+    public function regenerateWebhookToken()
+    {
+        $this->guardImportRequest();
+
+        WebhookHandler::regenerateToken();
+
+        wp_send_json(array(
+            'status' => true,
+            'events' => $this->webhookEventUrls(),
+        ));
+    }
+
+    /**
+     * Everything the per-event field mapper dialog needs: the stored manual
+     * mapping, the last captured payload, what the keyword rules would pick
+     * for each captured key, the mappable columns, and the webhook URL to
+     * test against.
+     */
+    public function getWebhookMapping()
+    {
+        $this->guardImportRequest();
+        $eventId = $this->requireEventId();
+
+        $lastPayload = WebhookHandler::getLastPayload($eventId);
+
+        $handler = new WebhookHandler();
+        $auto = array();
+
+        if (!empty($lastPayload['fields']) && is_array($lastPayload['fields'])) {
+            foreach ($lastPayload['fields'] as $key => $value) {
+                $auto[$key] = $handler->autoColumnFor($key);
+            }
+        }
+
+        wp_send_json(array(
+            'status'       => true,
+            'mapping'      => WebhookHandler::getMapping($eventId),
+            'last_payload' => $lastPayload,
+            'auto'         => $auto,
+            'columns'      => ApplicantModel::getMappableColumns(),
+            'url'          => WebhookHandler::getUrl($eventId),
+        ));
+    }
+
+    public function saveWebhookMapping()
+    {
+        $this->guardImportRequest();
+        $eventId = $this->requireEventId();
+
+        $mapping = json_decode(isset($_REQUEST['mapping']) ? wp_unslash($_REQUEST['mapping']) : '', true);
+
+        if (!is_array($mapping)) {
+            wp_send_json(array(
+                'status'  => false,
+                'message' => __('No mapping to save.', 'textdomain'),
+            ), 400);
+        }
+
+        wp_send_json(array(
+            'status'  => true,
+            'mapping' => WebhookHandler::saveMapping($eventId, $mapping),
+        ));
+    }
+
+    private function webhookEventUrls()
+    {
+        $events = (new EventModel())->get();
+        $rows = array();
+
+        foreach ($events['data'] as $event) {
+            $rows[] = array(
+                'id'    => (int) $event->id,
+                'title' => $event->title,
+                'url'   => WebhookHandler::getUrl($event->id),
+            );
+        }
+
+        return $rows;
     }
 
     public function saveEvent()

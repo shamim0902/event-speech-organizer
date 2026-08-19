@@ -81,6 +81,76 @@
     background: #fbfbfc;
 }
 
+// Applicant table -----------------------------------------------------------
+
+.eso-table {
+    background: var(--eso-surface);
+    border: 1px solid var(--eso-border);
+    border-radius: var(--eso-radius-card);
+    box-shadow: var(--eso-shadow);
+
+    // Round the actual table corners too, or the header paints over ours.
+    overflow: hidden;
+
+    &::before {
+        display: none; // Element UI's bottom border strip
+    }
+}
+
+.eso-table__applicant {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s3);
+    min-width: 0;
+
+    .eso-avatar {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+    }
+}
+
+.eso-table__name {
+    font-weight: 600;
+    color: var(--eso-text);
+    word-break: break-word;
+}
+
+.eso-table__email {
+    display: block;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.eso-table__meta {
+    font-size: 12px;
+    color: var(--eso-text-muted);
+}
+
+// Rows navigate to the applicant's page; links and buttons inside a row
+// keep their own behaviour, and the expand arrow only unfolds details.
+.eso-table--clickable .el-table__row {
+    cursor: pointer;
+}
+
+.eso-table__expand {
+    padding: var(--eso-s2) var(--eso-s4);
+
+    .eso-detail-list {
+        margin-top: var(--eso-s3);
+
+        &:only-child {
+            margin-top: 0;
+        }
+    }
+
+    .eso-link-btn {
+        margin-top: var(--eso-s3);
+    }
+}
+
 // Avatar --------------------------------------------------------------------
 
 .eso-avatar {
@@ -332,7 +402,25 @@
 }
 
 .eso-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s3);
+    flex-wrap: wrap;
     margin-bottom: var(--eso-s5);
+}
+
+// Pushes the right-side controls to the far edge of the nav row.
+.eso-nav__spacer {
+    flex: 1 1 auto;
+}
+
+// Compact search/sort, sitting to the right of the status pills.
+.eso-nav__search {
+    width: 210px;
+}
+
+.eso-nav__sort {
+    width: 140px;
 }
 
 // Stat tiles ----------------------------------------------------------------

@@ -39,6 +39,30 @@ class ApplicantModel
     }
 
     /**
+     * Columns an external source (webhook, form feed) may map onto, with
+     * their admin-facing labels. `status`, `date`, `consent` and `ip` are
+     * deliberately absent — those are set by the plugin, not the sender.
+     */
+    public static function getMappableColumns()
+    {
+        return array(
+            'name'        => 'Name',
+            'email'       => 'Email',
+            'phone'       => 'Phone',
+            'username'    => 'WordPress.org username',
+            'social'      => 'Social handles',
+            'comment'     => 'Bio',
+            'topic'       => 'Topic title',
+            'type'        => 'Talk type',
+            'description' => 'Description',
+            'cospeakers'  => 'Co-speakers',
+            'audience'    => 'Audience',
+            'experience'  => 'Experience',
+            'question'    => 'Question',
+        );
+    }
+
+    /**
      * Bulk-insert applicants from a parsed CSV, skipping any row whose email
      * already exists in the table or repeats earlier in the same batch.
      *

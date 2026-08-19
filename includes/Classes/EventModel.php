@@ -123,6 +123,8 @@ class EventModel
 
         $wpdb->delete($this->table(), array('id' => $id));
 
+        WebhookHandler::deleteEventData($id);
+
         return array('status' => true);
     }
 

@@ -5,12 +5,22 @@ import Selected from './Components/Selected.vue'
 import Slots from './Components/Slots.vue'
 import Events from './Components/Events.vue'
 import All from './Components/All.vue'
+import Settings from './Components/Settings.vue'
+import Applicant from './Components/Applicant.vue'
 
 export const routes = [
   {
     path: '/',
     name: 'events',
     component: Events
+  },
+
+  // Static paths must sit above the '/:id' dashboard route, or it swallows
+  // them.
+  {
+    path: '/settings',
+    name: 'settings',
+    component: Settings
   },
 
   {
@@ -22,6 +32,11 @@ export const routes = [
         path: '/:id/all',
         name: 'applicants',
         component: All
+      },
+      {
+        path: '/:id/applicant/:applicantId',
+        name: 'applicant',
+        component: Applicant
       },
       {
         path: '/:id/selected',

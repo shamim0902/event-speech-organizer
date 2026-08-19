@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
 }
 if (!defined('EVENT_SPEECH_ORGANIZER_VERSION')) {
     define('EVENT_SPEECH_ORGANIZER_VERSION_LITE', true);
-    define('EVENT_SPEECH_ORGANIZER_VERSION', '1.1.0');
+    define('EVENT_SPEECH_ORGANIZER_VERSION', '1.2.0');
     define('EVENT_SPEECH_ORGANIZER_MAIN_FILE', __FILE__);
     define('EVENT_SPEECH_ORGANIZER_URL', plugin_dir_url(__FILE__));
     define('EVENT_SPEECH_ORGANIZER_DIR', plugin_dir_path(__FILE__));
@@ -57,6 +57,10 @@ if (!defined('EVENT_SPEECH_ORGANIZER_VERSION')) {
             // Must run outside the is_admin() guard: form submissions are
             // processed on the front end, so the integration would never fire.
             $this->integrationHooks();
+
+            // Also outside is_admin(): REST requests from remote sites are
+            // front-end requests.
+            \EventSpeechOrganizer\Classes\WebhookHandler::register();
         }
 
         /**

@@ -32,26 +32,18 @@ class Menu
 
         add_action('load-' . $hook, array($this, 'prepareScreen'));
 
-        $submenu['event_speech_organizer.php']['applicants'] = array(
+        // Hash links into the Vue app. An event's applicants and slots are
+        // reached through the events screen, not through the admin menu.
+        $submenu['event_speech_organizer.php']['events'] = array(
             __('My events', 'textdomain'),
             $menuPermission,
             'admin.php?page=event_speech_organizer.php#/',
         );
-        // $submenu['event_speech_organizer.php']['selected'] = array(
-        //     __('Selected', 'textdomain'),
-        //     $menuPermission,
-        //     'admin.php?page=event_speech_organizer.php#/selected',
-        // );
-        // $submenu['event_speech_organizer.php']['waiting'] = array(
-        //     __('Waiting', 'textdomain'),
-        //     $menuPermission,
-        //     'admin.php?page=event_speech_organizer.php#/waiting',
-        // );
-        // $submenu['event_speech_organizer.php']['rejected'] = array(
-        //     __('Rejected', 'textdomain'),
-        //     $menuPermission,
-        //     'admin.php?page=event_speech_organizer.php#/rejected',
-        // );
+        $submenu['event_speech_organizer.php']['settings'] = array(
+            __('Settings', 'textdomain'),
+            $menuPermission,
+            'admin.php?page=event_speech_organizer.php#/settings',
+        );
     }
 
     /**
@@ -79,6 +71,22 @@ class Menu
         }
     }
 
+    /**
+     * Cache-busting version for one asset. The file's mtime is appended so a
+     * redeploy always changes the ?ver= query string — a bare plugin version
+     * left browsers serving stale cached bundles after deploys that did not
+     * bump it.
+     */
+    private function assetVersion($relativePath)
+    {
+        $file = EVENT_SPEECH_ORGANIZER_DIR . 'assets/' . $relativePath;
+        $mtime = file_exists($file) ? filemtime($file) : false;
+
+        return $mtime
+            ? EVENT_SPEECH_ORGANIZER_VERSION . '.' . $mtime
+            : EVENT_SPEECH_ORGANIZER_VERSION;
+    }
+
     public function enqueueAssets()
     {
         do_action('event_speech_organizer/render_admin_app');
@@ -87,7 +95,7 @@ class Menu
             'event_speech_organizer_boot',
             EVENT_SPEECH_ORGANIZER_URL . 'assets/js/boot.js',
             array('jquery'),
-            EVENT_SPEECH_ORGANIZER_VERSION,
+            $this->assetVersion('js/boot.js'),
             true
         );
 
@@ -97,7 +105,7 @@ class Menu
             'event-speech-organizer_js',
             EVENT_SPEECH_ORGANIZER_URL . 'assets/js/plugin-main-js-file.js',
             array('event_speech_organizer_boot'),
-            EVENT_SPEECH_ORGANIZER_VERSION,
+            $this->assetVersion('js/plugin-main-js-file.js'),
             true
         );
 
@@ -106,7 +114,7 @@ class Menu
             'event-speech-organizer_admin_css',
             EVENT_SPEECH_ORGANIZER_URL . 'assets/css/element.css',
             array(),
-            EVENT_SPEECH_ORGANIZER_VERSION
+            $this->assetVersion('css/element.css')
         );
 
         $eventSpeechOrganizer = apply_filters('event_speech_organizer/admin_app_vars', array(

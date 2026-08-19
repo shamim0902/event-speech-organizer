@@ -1,52 +1,5 @@
 <template>
   <div>
-    <div class="eso-toolbar">
-      <el-input
-        class="eso-toolbar__search"
-        v-model="search"
-        size="small"
-        clearable
-        prefix-icon="el-icon-search"
-        placeholder="Search name, email or topic"
-      ></el-input>
-
-      <el-select
-        class="eso-toolbar__sort"
-        v-model="sortBy"
-        size="small"
-        placeholder="Sort by"
-      >
-        <el-option label="Newest first" value="newest"></el-option>
-        <el-option label="Name (A–Z)" value="name"></el-option>
-        <el-option label="Status" value="status"></el-option>
-      </el-select>
-
-      <span class="eso-toolbar__count">{{ countLabel }}</span>
-
-      <span class="eso-toolbar__spacer"></span>
-
-      <el-button
-        type="default"
-        icon="el-icon-upload2"
-        size="small"
-        @click="importModal = true"
-        >Import CSV</el-button
-      >
-
-      <el-button
-        type="default"
-        icon="el-icon-download"
-        size="small"
-        :disabled="!visibleSpeakers.length"
-        @click="downloadCSV"
-        >Download CSV</el-button
-      >
-
-      <el-button type="primary" icon="el-icon-plus" size="small" @click="add"
-        >Add applicant</el-button
-      >
-    </div>
-
     <div v-loading="loading">
       <empty-state
         v-if="!visibleSpeakers.length"
@@ -55,133 +8,161 @@
         :hint="emptyHint"
       >
         <el-button
-          v-if="!search"
+          v-if="!listState.search"
           type="primary"
           size="small"
           icon="el-icon-plus"
           @click="add"
           >Add applicant</el-button
         >
-        <el-button v-else size="small" @click="search = ''"
+        <el-button v-else size="small" @click="listState.search = ''"
           >Clear search</el-button
         >
       </empty-state>
 
-      <ul class="eso-card-grid" v-else>
-        <li v-for="speaker in visibleSpeakers" :key="speaker.id">
-          <div class="eso-card">
-            <div class="eso-card__header">
-              <img
-                class="eso-avatar"
-                :src="get_gravatar_image_url(speaker.email, '96')"
-                :alt="speaker.name"
-              />
-              <div class="eso-card__header-main">
-                <div class="eso-card__title">{{ speaker.name }}</div>
-                <div class="eso-card__meta">
-                  #{{ speaker.id }} · Applied {{ speaker.date || '—' }}
-                </div>
-              </div>
-              <status-badge :status="speaker.status" />
-            </div>
-
-            <div class="eso-card__body">
-              <h3 v-if="speaker.topic">{{ speaker.topic }}</h3>
-
-              <ul class="eso-meta-list eso-card__contact">
-                <li class="eso-meta-list__item" v-if="speaker.email">
-                  <i class="el-icon-message"></i>
-                  <a :href="'mailto:' + speaker.email">{{ speaker.email }}</a>
-                </li>
-                <li class="eso-meta-list__item" v-if="speaker.phone">
+      <el-table
+        v-else
+        class="eso-table eso-table--clickable"
+        :data="visibleSpeakers"
+        row-key="id"
+        @row-click="openApplicant"
+      >
+        <el-table-column type="expand">
+          <template slot-scope="scope">
+            <div class="eso-table__expand">
+              <ul class="eso-meta-list">
+                <li class="eso-meta-list__item" v-if="scope.row.phone">
                   <i class="el-icon-phone-outline"></i>
-                  <a :href="'tel:' + speaker.phone">{{ speaker.phone }}</a>
+                  <a :href="'tel:' + scope.row.phone">{{ scope.row.phone }}</a>
                 </li>
-                <li class="eso-meta-list__item" v-if="speaker.social">
+                <li class="eso-meta-list__item" v-if="scope.row.social">
                   <i class="el-icon-share"></i>
-                  <a target="_blank" rel="noopener" :href="speaker.social">{{
-                    speaker.social
+                  <a target="_blank" rel="noopener" :href="scope.row.social">{{
+                    scope.row.social
                   }}</a>
                 </li>
-                <li class="eso-meta-list__item" v-if="speaker.username">
+                <li class="eso-meta-list__item" v-if="scope.row.username">
                   <i class="el-icon-link"></i>
-                  <a target="_blank" rel="noopener" :href="getWpProfile(speaker)"
-                    >{{ speaker.username }}</a
+                  <a
+                    target="_blank"
+                    rel="noopener"
+                    :href="wpProfile(scope.row.username)"
+                    >{{ scope.row.username }}</a
                   >
                 </li>
               </ul>
 
-              <el-collapse class="eso-collapse">
-                <el-collapse-item title="Bio" name="bio" v-if="speaker.comment">
-                  <p>{{ speaker.comment }}</p>
-                </el-collapse-item>
+              <dl class="eso-detail-list">
+                <template v-if="scope.row.comment">
+                  <dt>Bio</dt>
+                  <dd>{{ scope.row.comment }}</dd>
+                </template>
+                <template v-if="scope.row.description">
+                  <dt>Description</dt>
+                  <dd>{{ scope.row.description }}</dd>
+                </template>
+                <template v-if="scope.row.cospeakers">
+                  <dt>Co-speakers</dt>
+                  <dd>{{ scope.row.cospeakers }}</dd>
+                </template>
+                <template v-if="scope.row.audience">
+                  <dt>Audience</dt>
+                  <dd>{{ scope.row.audience }}</dd>
+                </template>
+                <template v-if="scope.row.experience">
+                  <dt>Experience</dt>
+                  <dd>{{ scope.row.experience }}</dd>
+                </template>
+              </dl>
 
-                <el-collapse-item title="Talk details" name="talk">
-                  <p v-if="speaker.description">{{ speaker.description }}</p>
-                  <dl class="eso-detail-list">
-                    <template v-if="speaker.type">
-                      <dt>Type</dt>
-                      <dd>{{ speaker.type }}</dd>
-                    </template>
-                    <template v-if="speaker.cospeakers">
-                      <dt>Co-speakers</dt>
-                      <dd>{{ speaker.cospeakers }}</dd>
-                    </template>
-                    <template v-if="speaker.audience">
-                      <dt>Audience</dt>
-                      <dd>{{ speaker.audience }}</dd>
-                    </template>
-                    <template v-if="speaker.experience">
-                      <dt>Experience</dt>
-                      <dd>{{ speaker.experience }}</dd>
-                    </template>
-                  </dl>
-                </el-collapse-item>
-              </el-collapse>
-            </div>
-
-            <div class="eso-card__footer">
-              <el-button-group>
-                <el-button
-                  plain
-                  type="success"
-                  size="mini"
-                  :disabled="speaker.status === 'approved'"
-                  @click="updateStatus(speaker, 'approved')"
-                >
-                  Approve
-                </el-button>
-                <el-button
-                  plain
-                  type="info"
-                  size="mini"
-                  :disabled="speaker.status === 'waiting'"
-                  @click="updateStatus(speaker, 'waiting')"
-                >
-                  Waitlist
-                </el-button>
-                <el-button
-                  plain
-                  type="danger"
-                  size="mini"
-                  :disabled="speaker.status === 'rejected'"
-                  @click="updateStatus(speaker, 'rejected')"
-                >
-                  Reject
-                </el-button>
-              </el-button-group>
-
-              <button
+              <router-link
                 class="eso-link-btn"
-                type="button"
-                @click="editApplicant(speaker)"
+                :to="{ name: 'applicant', params: { id: eventId, applicantId: scope.row.id } }"
               >
-                <i class="el-icon-edit"></i> Edit
-              </button>
+                Open applicant page <i class="el-icon-arrow-right"></i>
+              </router-link>
             </div>
-          </div>
-        </li>
-      </ul>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Applicant" min-width="220">
+          <template slot-scope="scope">
+            <div class="eso-table__applicant">
+              <img
+                class="eso-avatar"
+                :src="get_gravatar_image_url(scope.row.email, '96')"
+                :alt="scope.row.name"
+              />
+              <div>
+                <div class="eso-table__name">{{ scope.row.name }}</div>
+                <a class="eso-table__email" :href="'mailto:' + scope.row.email">{{
+                  scope.row.email
+                }}</a>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Topic" min-width="220">
+          <template slot-scope="scope">
+            <div class="eso-table__name" v-if="scope.row.topic">
+              {{ scope.row.topic }}
+            </div>
+            <span v-else>—</span>
+            <div class="eso-table__meta" v-if="scope.row.type">
+              {{ scope.row.type }}
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Applied" width="160">
+          <template slot-scope="scope">
+            <div class="eso-table__meta">
+              #{{ scope.row.id }} · {{ scope.row.date || '—' }}
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Status" width="120">
+          <template slot-scope="scope">
+            <status-badge :status="scope.row.status" />
+          </template>
+        </el-table-column>
+
+        <el-table-column label="Actions" width="280" align="right">
+          <template slot-scope="scope">
+            <el-button-group>
+              <el-button
+                plain
+                type="success"
+                size="mini"
+                :disabled="scope.row.status === 'approved'"
+                @click="updateStatus(scope.row, 'approved')"
+              >
+                Approve
+              </el-button>
+              <el-button
+                plain
+                type="info"
+                size="mini"
+                :disabled="scope.row.status === 'waiting'"
+                @click="updateStatus(scope.row, 'waiting')"
+              >
+                Waitlist
+              </el-button>
+              <el-button
+                plain
+                type="danger"
+                size="mini"
+                :disabled="scope.row.status === 'rejected'"
+                @click="updateStatus(scope.row, 'rejected')"
+              >
+                Reject
+              </el-button>
+            </el-button-group>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
 
     <import-dialog
@@ -191,141 +172,23 @@
       @imported="onImported"
     />
 
-    <!-- add / edit applicant -->
-    <el-dialog
-      :title="dialogTitle"
+    <!-- add applicant -->
+    <applicant-form-dialog
       :visible.sync="speakerModal"
-      width="760px"
-      append-to-body
-    >
-      <el-form :model="speakerNew" label-width="130px" label-position="top">
-        <div class="eso-form-section">
-          <p class="eso-form-section__title">Applicant</p>
-          <el-row :gutter="16">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Name">
-                <el-input v-model="speakerNew.name" placeholder="Full name"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Application date">
-                <el-input
-                  v-model="speakerNew.date"
-                  placeholder="e.g. 2024-05-14 10:30"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Email">
-                <el-input v-model="speakerNew.email" placeholder="name@example.com"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Phone">
-                <el-input v-model="speakerNew.phone" placeholder="Phone number"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="WordPress.org username">
-                <el-input
-                  v-model="speakerNew.username"
-                  placeholder="Username or profile URL"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Social handles">
-                <el-input
-                  v-model="speakerNew.social"
-                  placeholder="Profile URL"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="24">
-              <el-form-item label="Bio">
-                <el-input
-                  type="textarea"
-                  :rows="3"
-                  v-model="speakerNew.comment"
-                  placeholder="Short speaker bio"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
-        </div>
-
-        <div class="eso-form-section">
-          <p class="eso-form-section__title">Talk</p>
-          <el-row :gutter="16">
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Topic title">
-                <el-input v-model="speakerNew.topic" placeholder="Talk title"></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Talk type">
-                <el-input
-                  v-model="speakerNew.type"
-                  placeholder="e.g. Keynote, Lightning"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="24">
-              <el-form-item label="Description">
-                <el-input
-                  type="textarea"
-                  :rows="3"
-                  v-model="speakerNew.description"
-                  placeholder="What is the talk about?"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Co-speakers">
-                <el-input
-                  v-model="speakerNew.cospeakers"
-                  placeholder="Names of co-speakers"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="Audience">
-                <el-input
-                  v-model="speakerNew.audience"
-                  placeholder="Who is this for?"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-            <el-col :span="24">
-              <el-form-item label="Experience">
-                <el-input
-                  type="textarea"
-                  :rows="2"
-                  v-model="speakerNew.experience"
-                  placeholder="Previous speaking experience"
-                ></el-input>
-              </el-form-item>
-            </el-col>
-          </el-row>
-        </div>
-      </el-form>
-
-      <span slot="footer" class="dialog-footer">
-        <el-button size="small" @click="speakerModal = false">Cancel</el-button>
-        <el-button size="small" type="primary" @click="addOrUpdate"
-          >Save applicant</el-button
-        >
-      </span>
-    </el-dialog>
+      :event-id="eventId"
+      @saved="refresh"
+    />
   </div>
 </template>
 
 <script>
-var md5 = require('md5')
 import EmptyState from './Common/EmptyState.vue'
 import StatusBadge from './Common/StatusBadge.vue'
 import ImportDialog from './ImportDialog.vue'
+import ApplicantFormDialog from './ApplicantFormDialog.vue'
 import { IMPORT_FIELDS, toCsv } from './Common/csv'
+import { gravatarUrl, wpProfileUrl } from './Common/applicantHelpers'
+import listState from './Common/listState'
 
 const STATUS_ORDER = { approved: 0, waiting: 1, rejected: 2 }
 
@@ -334,31 +197,14 @@ export default {
   components: {
     EmptyState,
     StatusBadge,
-    ImportDialog
+    ImportDialog,
+    ApplicantFormDialog
   },
   data () {
     return {
       speakerModal: false,
       importModal: false,
-      search: '',
-      sortBy: 'newest',
-      speakerFormMock: {
-        date: '',
-        name: '',
-        email: '',
-        phone: '',
-        social: '',
-        username: '',
-        comment: '',
-        topic: '',
-        description: '',
-        type: '',
-        cospeakers: '',
-        audience: '',
-        experience: '',
-        status: 'waiting'
-      },
-      speakerNew: {}
+      listState
     }
   },
   props: {
@@ -375,11 +221,8 @@ export default {
     eventId () {
       return this.$route.params.id
     },
-    dialogTitle () {
-      return this.speakerNew.id ? 'Edit applicant' : 'Add applicant'
-    },
     visibleSpeakers () {
-      const query = this.search.trim().toLowerCase()
+      const query = this.listState.search.trim().toLowerCase()
 
       let list = this.eventSpeechOrganizer.filter(speaker => {
         if (!query) {
@@ -392,7 +235,7 @@ export default {
 
       list = list.slice()
 
-      if (this.sortBy === 'name') {
+      if (this.listState.sortBy === 'name') {
         list.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       } else if (this.sortBy === 'status') {
         list.sort((a, b) => {
@@ -406,50 +249,62 @@ export default {
 
       return list
     },
-    countLabel () {
-      const total = this.eventSpeechOrganizer.length
-      const shown = this.visibleSpeakers.length
-
-      if (shown === total) {
-        return total + (total === 1 ? ' applicant' : ' applicants')
-      }
-      return shown + ' of ' + total + ' applicants'
-    },
     emptyTitle () {
-      return this.search ? 'No matching applicants' : 'No applicants in this list'
+      return this.listState.search ? 'No matching applicants' : 'No applicants in this list'
     },
     emptyHint () {
-      return this.search
+      return this.listState.search
         ? 'Try a different name, email address or topic.'
         : 'Applicants you add or import will appear here.'
     }
   },
   methods: {
-    editApplicant (speaker) {
-      this.speakerModal = true
-      this.speakerNew = Object.assign({}, this.speakerFormMock, speaker)
-    },
     add () {
       this.speakerModal = true
-      this.speakerNew = Object.assign({}, this.speakerFormMock)
+    },
+    /**
+     * Import / Download / Add moved into the event page's 3-dot menu, which
+     * lives in Dashboard — its choices arrive over the event bus.
+     */
+    onListAction (action) {
+      if (action === 'add') {
+        this.add()
+      } else if (action === 'import') {
+        this.importModal = true
+      } else if (action === 'download') {
+        if (!this.visibleSpeakers.length) {
+          this.$message.info('No applicants to export in this list.')
+          return
+        }
+        this.downloadCSV()
+      }
+    },
+    /**
+     * Whole-row click opens the applicant's page. Links and buttons inside
+     * the row (mailto, status actions) keep their own behaviour, and the
+     * expand column only toggles the detail row.
+     */
+    openApplicant (row, column, event) {
+      if (column && column.type === 'expand') {
+        return
+      }
+
+      if (
+        event &&
+        event.target &&
+        event.target.closest('a, button, .el-table__expand-icon')
+      ) {
+        return
+      }
+
+      this.$router.push({
+        name: 'applicant',
+        params: { id: this.eventId, applicantId: row.id }
+      })
     },
     refresh () {
       this.$emit('fetch')
       window.eventSpeechOrganizerBus.$emit('applicants-updated')
-    },
-    addOrUpdate () {
-      const isUpdate = !!this.speakerNew.id
-
-      this.$post({
-        action: 'event_speech_organizer_admin_ajax',
-        route: isUpdate ? 'edit_applicant' : 'add_applicant',
-        event_id: this.eventId,
-        data: this.speakerNew
-      }).then(() => {
-        this.speakerModal = false
-        this.$message.success(isUpdate ? 'Applicant updated.' : 'Applicant added.')
-        this.refresh()
-      })
     },
     onImported (result) {
       if (result.imported) {
@@ -492,42 +347,14 @@ export default {
         this.refresh()
       })
     },
-    getWpProfile (speaker) {
-      const username = speaker.username || ''
-
-      if (username.indexOf('@') > -1) {
-        return 'https://profiles.wordpress.org/' + username.split('@')[1]
-      } else if (username.indexOf('https://') > -1) {
-        return username
-      }
-      return 'https://profiles.wordpress.org/' + username
-    },
-    get_gravatar_image_url (
-      email,
-      size,
-      default_image,
-      allowed_rating,
-      force_default
-    ) {
-      email = typeof email !== 'undefined' && email ? email : 'john.doe@example.com'
-      size = size >= 1 && size <= 2048 ? size : 80
-      default_image =
-        typeof default_image !== 'undefined' ? default_image : 'mm'
-      allowed_rating =
-        typeof allowed_rating !== 'undefined' ? allowed_rating : 'g'
-      force_default = force_default === true ? 'y' : 'n'
-      return (
-        'https://secure.gravatar.com/avatar/' +
-        md5(email.toLowerCase().trim()) +
-        '?size=' +
-        size +
-        '&default=' +
-        encodeURIComponent(default_image) +
-        '&rating=' +
-        allowed_rating +
-        (force_default === 'y' ? '&forcedefault=' + force_default : '')
-      )
-    }
+    get_gravatar_image_url: gravatarUrl,
+    wpProfile: wpProfileUrl
+  },
+  mounted () {
+    window.eventSpeechOrganizerBus.$on('applicant-list-action', this.onListAction)
+  },
+  beforeDestroy () {
+    window.eventSpeechOrganizerBus.$off('applicant-list-action', this.onListAction)
   }
 }
 </script>

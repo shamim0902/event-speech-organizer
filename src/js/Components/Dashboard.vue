@@ -3,29 +3,60 @@
     <page-header
       :title="eventTitle"
       :subtitle="subtitle"
-      :back-to="{ name: 'events' }"
+      :back-to="{ name: 'events', query: { all: '1' } }"
       back-label="All events"
-    />
+    >
+      <template slot="actions">
+        <el-dropdown trigger="click" @command="onMenuCommand">
+          <el-button size="small" icon="el-icon-more" circle></el-button>
+          <el-dropdown-menu slot="dropdown">
+            <template v-if="isApplicantList">
+              <el-dropdown-item command="add" icon="el-icon-plus"
+                >Add applicant</el-dropdown-item
+              >
+              <el-dropdown-item command="import" icon="el-icon-upload2"
+                >Import CSV</el-dropdown-item
+              >
+              <el-dropdown-item command="download" icon="el-icon-download"
+                >Download CSV</el-dropdown-item
+              >
+            </template>
+            <el-dropdown-item
+              command="mapper"
+              icon="el-icon-set-up"
+              :divided="isApplicantList"
+              >Webhook field mapper</el-dropdown-item
+            >
+          </el-dropdown-menu>
+        </el-dropdown>
+      </template>
+    </page-header>
 
     <filter-nav :counts="counts" />
 
     <router-view></router-view>
+
+    <webhook-mapper-dialog :visible.sync="mapperVisible" :event-id="eventId" />
   </div>
 </template>
 
 <script>
 import FilterNav from './FilterNav.vue'
 import PageHeader from './Common/PageHeader.vue'
+import WebhookMapperDialog from './WebhookMapperDialog.vue'
+import listState from './Common/listState'
 
 export default {
   name: 'Dashboard',
   components: {
     FilterNav,
-    PageHeader
+    PageHeader,
+    WebhookMapperDialog
   },
   data () {
     return {
       event: null,
+      mapperVisible: false,
       counts: {
         total: 0,
         approved: 0,
@@ -37,6 +68,9 @@ export default {
   computed: {
     eventId () {
       return this.$route.params.id
+    },
+    isApplicantList () {
+      return ['applicants', 'selected', 'waiting', 'rejected'].indexOf(this.$route.name) > -1
     },
     eventTitle () {
       return this.event ? this.event.title : 'Loading…'
@@ -60,6 +94,15 @@ export default {
     }
   },
   methods: {
+    onMenuCommand (command) {
+      if (command === 'mapper') {
+        this.mapperVisible = true
+        return
+      }
+
+      // add / import / download — handled by the applicant list component.
+      window.eventSpeechOrganizerBus.$emit('applicant-list-action', command)
+    },
     fetchEvent () {
       this.$get({
         action: 'event_speech_organizer_admin_ajax',
@@ -94,6 +137,9 @@ export default {
       })
     },
     refresh () {
+      // A search typed in one event must not silently filter another.
+      listState.search = ''
+
       this.fetchEvent()
       this.fetchCounts()
     }

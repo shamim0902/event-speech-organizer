@@ -11,7 +11,7 @@
       </template>
     </page-header>
 
-    <div v-loading="loading">
+    <div v-loading="loading" v-if="!redirecting">
       <empty-state
         v-if="!events.length"
         icon="el-icon-date"
@@ -68,6 +68,12 @@
               ></router-link>
 
               <span class="eso-link-actions">
+                <router-link
+                  class="eso-link-btn"
+                  :to="{ name: 'slots', params: { id: event.id } }"
+                >
+                  <i class="el-icon-time"></i> Slots
+                </router-link>
                 <button class="eso-link-btn" type="button" @click="edit(event)">
                   <i class="el-icon-edit"></i> Edit
                 </button>
@@ -164,6 +170,7 @@ export default {
     return {
       events: [],
       loading: false,
+      redirecting: false,
       saving: false,
       dialogVisible: false,
       form: emptyForm()
@@ -183,11 +190,31 @@ export default {
         route: 'get_events'
       })
         .then(response => {
-          this.events = (response && response.data) || []
+          const events = (response && response.data) || []
+
+          if (this.shouldAutoOpen(events)) {
+            this.redirecting = true
+            this.$router
+              .replace({ name: 'applicants', params: { id: events[0].id } })
+              .catch(() => {})
+            return
+          }
+
+          this.events = events
         })
         .always(() => {
           this.loading = false
         })
+    },
+    /**
+     * With a single event this list is just an extra click, so go straight in.
+     *
+     * `?all=1` is the escape hatch used by the dashboard's "All events" link:
+     * without it a one-event install could never reach this screen to add a
+     * second event.
+     */
+    shouldAutoOpen (events) {
+      return events.length === 1 && !this.$route.query.all
     },
     create () {
       this.form = emptyForm()
@@ -259,6 +286,14 @@ export default {
         this.$message.success('Event deleted.')
         this.fetch()
       })
+    }
+  },
+  watch: {
+    // Only the query changes between /#/ and /#/?all=1, so vue-router reuses
+    // this component and mounted() will not fire again.
+    '$route.query.all' () {
+      this.redirecting = false
+      this.fetch()
     }
   },
   mounted () {
