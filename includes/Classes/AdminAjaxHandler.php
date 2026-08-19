@@ -25,6 +25,7 @@ class AdminAjaxHandler
             'search_speakers' => 'searchSpeakers',
             'add_applicant' => 'addApplicant',
             'edit_applicant' => 'editApplicant',
+            'delete_applicant' => 'deleteApplicant',
             'import_applicants' => 'importApplicants',
             'fluentform_forms' => 'fluentFormForms',
             'fluentform_columns' => 'fluentFormColumns',
@@ -347,6 +348,18 @@ class AdminAjaxHandler
         (new ApplicantModel())->update($applicant);
 
         wp_send_json(array('status' => true));
+    }
+
+    public function deleteApplicant()
+    {
+        $this->guardImportRequest();
+        $eventId = $this->requireEventId();
+
+        $id = isset($_REQUEST['id']) ? absint($_REQUEST['id']) : 0;
+
+        $result = (new ApplicantModel())->delete($id, $eventId);
+
+        wp_send_json($result, empty($result['status']) ? 400 : 200);
     }
 
     public function addApplicant()

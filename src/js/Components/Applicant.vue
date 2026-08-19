@@ -121,9 +121,18 @@
           </el-button>
         </el-button-group>
 
-        <button class="eso-link-btn" type="button" @click="editModal = true">
-          <i class="el-icon-edit"></i> Edit
-        </button>
+        <span class="eso-link-actions">
+          <button class="eso-link-btn" type="button" @click="editModal = true">
+            <i class="el-icon-edit"></i> Edit
+          </button>
+          <button
+            class="eso-link-btn eso-link-btn--danger"
+            type="button"
+            @click="confirmRemove"
+          >
+            <i class="el-icon-delete"></i> Delete
+          </button>
+        </span>
       </div>
     </div>
 
@@ -185,6 +194,47 @@ export default {
         })
         .always(() => {
           this.loading = false
+        })
+    },
+    confirmRemove () {
+      this.$confirm(
+        'Delete "' + this.applicant.name + '"? This cannot be undone.',
+        'Delete applicant',
+        {
+          confirmButtonText: 'Delete',
+          cancelButtonText: 'Cancel',
+          type: 'warning'
+        }
+      )
+        .then(() => this.remove())
+        .catch(() => {})
+    },
+    remove () {
+      this.$post({
+        action: 'event_speech_organizer_admin_ajax',
+        route: 'delete_applicant',
+        nonce: window.eventSpeechOrganizerAdmin.nonce,
+        event_id: this.eventId,
+        id: this.applicant.id
+      })
+        .then(response => {
+          if (!response || !response.status) {
+            this.$message.error(
+              (response && response.message) || 'Could not delete the applicant.'
+            )
+            return
+          }
+
+          this.$message.success('Applicant deleted.')
+          window.eventSpeechOrganizerBus.$emit('applicants-updated')
+          this.$router.replace({ name: 'applicants', params: { id: this.eventId } })
+        })
+        .fail(xhr => {
+          const message =
+            xhr && xhr.responseJSON && xhr.responseJSON.message
+              ? xhr.responseJSON.message
+              : 'Could not delete the applicant.'
+          this.$message.error(message)
         })
     },
     updateStatus (status) {

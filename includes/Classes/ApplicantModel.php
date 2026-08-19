@@ -328,6 +328,31 @@ class ApplicantModel
         $wpdb->update($table_name, $this->sanitizeApplicant($speaker), array('id' => $id));
     }
 
+    /**
+     * Delete one applicant, scoped to its event so a stray id from another
+     * event's screen can never remove the wrong row.
+     */
+    public function delete($id, $eventId)
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'speakers';
+
+        $id = (int) $id;
+        $eventId = (int) $eventId;
+
+        if (!$id || !$eventId) {
+            return array('status' => false, 'message' => __('No applicant to delete.', 'textdomain'));
+        }
+
+        $deleted = $wpdb->delete($table_name, array('id' => $id, 'event_id' => $eventId));
+
+        if (!$deleted) {
+            return array('status' => false, 'message' => __('Applicant not found.', 'textdomain'));
+        }
+
+        return array('status' => true);
+    }
+
     public function insert($speaker)
     {
         global $wpdb;
