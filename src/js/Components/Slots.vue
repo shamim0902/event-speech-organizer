@@ -22,57 +22,80 @@
             >
           </empty-state>
 
-          <div class="eso-timeline" v-else>
-            <div class="eso-timeline__row" v-for="slot in slots" :key="slot.id">
-              <div class="eso-timeline__time">
+          <div class="eso-agenda" v-else>
+            <div
+              class="eso-agenda__row"
+              :class="{ 'eso-agenda__row--break': slot.talk_type === 'break' }"
+              v-for="slot in sortedSlots"
+              :key="slot.id"
+            >
+              <div class="eso-agenda__time">
                 <strong>{{ slot.from || '—' }}</strong>
-                {{ slot.to || '—' }}
+                <span>{{ slot.to || '' }}</span>
               </div>
 
-              <div class="eso-card eso-timeline__card">
-                <div class="eso-card__header">
-                  <div class="eso-card__header-main">
-                    <div class="eso-card__title">{{ slot.name || 'Untitled slot' }}</div>
-                    <div class="eso-card__meta">{{ durationLabel(slot) }}</div>
+              <div class="eso-agenda__rail">
+                <span
+                  class="eso-dot"
+                  :class="'eso-dot--' + (slot.talk_type || 'none')"
+                ></span>
+              </div>
+
+              <div class="eso-agenda__card">
+                <div class="eso-agenda__main">
+                  <div class="eso-agenda__title-row">
+                    <span class="eso-agenda__title">{{
+                      slot.name || 'Untitled slot'
+                    }}</span>
+                    <span
+                      class="eso-badge"
+                      :class="'eso-badge--' + slot.talk_type"
+                      v-if="slot.talk_type"
+                      >{{ typeLabel(slot.talk_type) }}</span
+                    >
+                    <span class="eso-agenda__duration">{{ durationLabel(slot) }}</span>
                   </div>
-                  <span
-                    class="eso-badge"
-                    :class="'eso-badge--' + slot.talk_type"
-                    v-if="slot.talk_type"
-                    >{{ typeLabel(slot.talk_type) }}</span
+
+                  <ul
+                    class="eso-chips eso-agenda__speakers"
+                    v-if="slotSpeakerObjects(slot).length"
+                  >
+                    <li
+                      class="eso-chip eso-chip--speaker"
+                      v-for="(speaker, index) in slotSpeakerObjects(slot)"
+                      :key="index"
+                    >
+                      <img
+                        v-if="speaker.email"
+                        class="eso-chip__avatar"
+                        :src="gravatar(speaker.email, '32')"
+                        :alt="speaker.name"
+                      />
+                      {{ speaker.name }}
+                    </li>
+                  </ul>
+                  <span class="eso-agenda__empty" v-else-if="slot.talk_type !== 'break'"
+                    >No speakers assigned</span
                   >
                 </div>
 
-                <div class="eso-card__body" v-if="slotSpeakers(slot).length">
-                  <ul class="eso-chips">
-                    <li
-                      class="eso-chip"
-                      v-for="(name, index) in slotSpeakers(slot)"
-                      :key="index"
-                    >
-                      {{ name }}
-                    </li>
-                  </ul>
-                </div>
-
-                <div class="eso-card__footer">
-                  <span class="eso-toolbar__count">
-                    {{ slotSpeakers(slot).length }} speaker{{
-                      slotSpeakers(slot).length === 1 ? '' : 's'
-                    }}
-                  </span>
-                  <span class="eso-link-actions">
-                    <button class="eso-link-btn" type="button" @click="edit(slot)">
-                      <i class="el-icon-edit"></i> Edit
-                    </button>
-                    <button
-                      class="eso-link-btn eso-link-btn--danger"
-                      type="button"
-                      @click="confirmRemove(slot)"
-                    >
-                      <i class="el-icon-delete"></i> Delete
-                    </button>
-                  </span>
+                <div class="eso-agenda__actions">
+                  <button
+                    class="eso-icon-btn"
+                    type="button"
+                    title="Edit slot"
+                    @click="edit(slot)"
+                  >
+                    <i class="el-icon-edit"></i>
+                  </button>
+                  <button
+                    class="eso-icon-btn eso-icon-btn--danger"
+                    type="button"
+                    title="Delete slot"
+                    @click="confirmRemove(slot)"
+                  >
+                    <i class="el-icon-delete"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -83,14 +106,19 @@
       <div>
         <div class="eso-section">
           <p class="eso-section__title">Slots by talk type</p>
-          <div class="eso-stats">
-            <div class="eso-stat" v-for="type in talkTypes" :key="type.slug">
-              <div class="eso-stat__value">{{ slotCounts[type.slug] || 0 }}</div>
-              <div class="eso-stat__label">
-                {{ type.name
-                }}<template v-if="type.duration !== '-'"> · {{ type.duration }} min</template>
-              </div>
-            </div>
+          <div class="eso-card">
+            <ul class="eso-type-list">
+              <li class="eso-type-list__item" v-for="type in talkTypes" :key="type.slug">
+                <span class="eso-dot" :class="'eso-dot--' + type.slug"></span>
+                <span class="eso-type-list__name">
+                  {{ type.name
+                  }}<em v-if="type.duration !== '-'"> · {{ type.duration }} min</em>
+                </span>
+                <span class="eso-badge eso-badge--count">{{
+                  slotCounts[type.slug] || 0
+                }}</span>
+              </li>
+            </ul>
           </div>
         </div>
 
@@ -117,80 +145,113 @@
       append-to-body
     >
       <el-form ref="form" :model="form" label-position="top">
-        <el-form-item label="Talk title">
-          <el-autocomplete
-            class="eso-full-width"
-            v-model="form.name"
-            :fetch-suggestions="querySearchAsync"
-            placeholder="Search existing topics or type a new one"
-            @select="handleSelect"
-          ></el-autocomplete>
-        </el-form-item>
-
-        <el-form-item label="Talk type">
-          <el-select
-            class="eso-full-width"
-            v-model="form.talk_type"
-            placeholder="Select a talk type"
-          >
-            <el-option
-              v-for="type in talkTypes"
-              :key="type.slug"
-              :label="type.name"
-              :value="type.slug"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-
-        <el-row :gutter="16">
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="Start time">
-              <el-time-select
-                class="eso-full-width"
-                placeholder="Start time"
-                v-model="form.from"
-                :picker-options="{ start: '08:00', step: '00:05', end: '18:30' }"
-              >
-              </el-time-select>
-            </el-form-item>
-          </el-col>
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="End time">
-              <el-time-select
-                class="eso-full-width"
-                placeholder="End time"
-                v-model="form.to"
-                :picker-options="{
-                  start: '08:00',
-                  step: '00:05',
-                  end: '18:30',
-                  minTime: form.from
-                }"
-              >
-              </el-time-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-form-item label="Speakers">
-          <el-select
-            class="eso-full-width"
-            v-model="form.speakers"
-            multiple
-            filterable
-            allow-create
-            default-first-option
-            placeholder="Assign speakers to this slot"
-          >
-            <el-option
-              v-for="item in speakers"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
+        <div class="eso-form-section">
+          <p class="eso-form-section__title">Speakers</p>
+          <el-form-item>
+            <el-select
+              class="eso-full-width"
+              v-model="form.speakers"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="Pick speakers — approved applicants come first"
+              @change="onSpeakersChange"
             >
-            </el-option>
-          </el-select>
-        </el-form-item>
+              <el-option
+                v-for="item in speakerOptions"
+                :key="item.id"
+                :label="item.name"
+                :value="item.id"
+              >
+                <div class="eso-speaker-option">
+                  <img
+                    class="eso-chip__avatar"
+                    :src="gravatar(item.email, '32')"
+                    :alt="item.name"
+                  />
+                  <span class="eso-speaker-option__name">{{ item.name }}</span>
+                  <span class="eso-speaker-option__topic" v-if="item.topic">{{
+                    item.topic
+                  }}</span>
+                </div>
+              </el-option>
+            </el-select>
+            <div class="eso-field-hint">
+              Picking a speaker fills in their proposed topic and talk type below —
+              both stay editable.
+            </div>
+          </el-form-item>
+        </div>
+
+        <div class="eso-form-section">
+          <p class="eso-form-section__title">Talk</p>
+          <el-form-item label="Talk title">
+            <el-autocomplete
+              class="eso-full-width"
+              v-model="form.name"
+              :fetch-suggestions="querySearchAsync"
+              placeholder="Search existing topics or type a new one"
+              @select="handleSelect"
+            ></el-autocomplete>
+          </el-form-item>
+
+          <el-form-item label="Talk type">
+            <el-select
+              class="eso-full-width"
+              v-model="form.talk_type"
+              placeholder="Select a talk type"
+              @change="maybeFillEnd"
+            >
+              <el-option
+                v-for="type in talkTypes"
+                :key="type.slug"
+                :label="
+                  type.duration === '-' ? type.name : type.name + ' · ' + type.duration + ' min'
+                "
+                :value="type.slug"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+        </div>
+
+        <div class="eso-form-section">
+          <p class="eso-form-section__title">Schedule</p>
+          <el-row :gutter="16">
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="Start time">
+                <el-time-select
+                  class="eso-full-width"
+                  placeholder="Start time"
+                  v-model="form.from"
+                  :picker-options="{ start: '08:00', step: '00:05', end: '18:30' }"
+                  @change="maybeFillEnd"
+                >
+                </el-time-select>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="End time">
+                <el-time-select
+                  class="eso-full-width"
+                  placeholder="End time"
+                  v-model="form.to"
+                  :picker-options="{
+                    start: '08:00',
+                    step: '00:05',
+                    end: '18:30',
+                    minTime: form.from
+                  }"
+                >
+                </el-time-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <div class="eso-field-hint">
+            The end time follows the talk type's duration once a start time is set —
+            adjust it freely.
+          </div>
+        </div>
       </el-form>
 
       <span slot="footer" class="dialog-footer">
@@ -203,6 +264,7 @@
 
 <script>
 import EmptyState from './Common/EmptyState.vue'
+import { gravatarUrl } from './Common/applicantHelpers'
 
 export default {
   name: 'Slots',
@@ -220,6 +282,14 @@ export default {
         from: '',
         to: '',
         speakers: []
+      },
+      // Last values this dialog filled in automatically. A field is only
+      // ever auto-overwritten while it still holds its auto value — the
+      // moment the user edits it, their text wins.
+      autoFilled: {
+        name: '',
+        talk_type: '',
+        to: ''
       },
       form: {
         name: '',
@@ -284,6 +354,36 @@ export default {
     },
     countLabel () {
       return this.slots.length + (this.slots.length === 1 ? ' slot' : ' slots')
+    },
+    /**
+     * Approved applicants first — they are the ones being scheduled — then
+     * everyone else, each group alphabetical.
+     */
+    speakerOptions () {
+      return this.speakers.slice().sort((a, b) => {
+        const approvedA = a.status === 'approved' ? 0 : 1
+        const approvedB = b.status === 'approved' ? 0 : 1
+
+        if (approvedA !== approvedB) {
+          return approvedA - approvedB
+        }
+        return (a.name || '').localeCompare(b.name || '')
+      })
+    },
+    /**
+     * Agenda order: by start time (zero-padded HH:MM sorts as text), untimed
+     * slots last, ties by creation order.
+     */
+    sortedSlots () {
+      return this.slots.slice().sort((a, b) => {
+        const fromA = a.from || '99:99'
+        const fromB = b.from || '99:99'
+
+        if (fromA !== fromB) {
+          return fromA < fromB ? -1 : 1
+        }
+        return Number(a.id) - Number(b.id)
+      })
     }
   },
   methods: {
@@ -298,14 +398,122 @@ export default {
       }
       return type.duration + ' min'
     },
-    slotSpeakers (slot) {
+    gravatar: gravatarUrl,
+    /**
+     * Slot speakers as {name, email}. Ids resolve against the applicant
+     * list; free-typed names pass through with no email (and no avatar).
+     */
+    slotSpeakerObjects (slot) {
       if (!slot.speakers) {
         return []
       }
-      return slot.speakers.map(id => this.getName(id))
+
+      return slot.speakers.map(id => {
+        const speaker = this.speakers.find(item => String(item.id) === String(id))
+
+        return speaker
+          ? { name: speaker.name, email: speaker.email }
+          : { name: id, email: '' }
+      })
     },
     handleSelect (item) {
       this.form.name = item.value
+    },
+    /**
+     * Seed title and type from the first selected speaker's application.
+     * Only fields that are empty or still hold a previous auto value are
+     * touched, so manual edits always survive.
+     */
+    onSpeakersChange (selected) {
+      const primary =
+        selected && selected.length
+          ? this.speakers.find(item => String(item.id) === String(selected[0]))
+          : null
+
+      if (!primary) {
+        return
+      }
+
+      if (primary.topic && (!this.form.name || this.form.name === this.autoFilled.name)) {
+        this.form.name = primary.topic
+        this.autoFilled.name = primary.topic
+      }
+
+      // Keyword guess from the application's session type; when it matches
+      // nothing (e.g. "Long Talk"), default to the first talk type so the
+      // field never stays empty after picking a speaker.
+      let slug = this.guessTypeSlug(primary.type)
+
+      if (!slug && this.talkTypes.length) {
+        slug = this.talkTypes[0].slug
+      }
+
+      if (slug && (!this.form.talk_type || this.form.talk_type === this.autoFilled.talk_type)) {
+        this.form.talk_type = slug
+        this.autoFilled.talk_type = slug
+        this.maybeFillEnd()
+      }
+    },
+    /**
+     * Applicants describe their session in free text ("Long Talk",
+     * "lightning session") — map it onto a slot talk type by keyword.
+     */
+    guessTypeSlug (text) {
+      text = (text || '').toLowerCase()
+
+      if (!text) {
+        return ''
+      }
+
+      if (text.indexOf('lightning') > -1) {
+        return 'lightning'
+      }
+      if (text.indexOf('panel') > -1) {
+        return 'panel'
+      }
+      if (text.indexOf('semi') > -1) {
+        return 'semi-keynote'
+      }
+      if (text.indexOf('keynote') > -1) {
+        return 'keynote'
+      }
+
+      const match = this.talkTypes.find(
+        type => text.indexOf(type.name.toLowerCase()) > -1
+      )
+
+      return match ? match.slug : ''
+    },
+    /**
+     * End time follows start time + the talk type's duration, but never
+     * overwrites an end time the user picked themselves.
+     */
+    maybeFillEnd () {
+      const type = this.talkTypes.find(item => item.slug === this.form.talk_type)
+
+      if (!type || type.duration === '-' || !this.form.from) {
+        return
+      }
+
+      if (this.form.to && this.form.to !== this.autoFilled.to) {
+        return
+      }
+
+      const end = this.addMinutes(this.form.from, parseInt(type.duration, 10))
+
+      this.form.to = end
+      this.autoFilled.to = end
+    },
+    addMinutes (time, minutes) {
+      const parts = time.split(':')
+      const total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) + minutes
+
+      const hours = Math.floor(total / 60) % 24
+      const mins = total % 60
+
+      return (
+        (hours < 10 ? '0' : '') + hours + ':' + (mins < 10 ? '0' : '') + mins
+      )
     },
     querySearchAsync (queryString, cb) {
       if (this.searchTimer) {
@@ -327,6 +535,7 @@ export default {
     },
     create () {
       this.form = Object.assign({}, this.form_mock, { speakers: [] })
+      this.autoFilled = { name: '', talk_type: '', to: '' }
       this.dialogVisible = true
     },
     addNew () {
@@ -342,10 +551,6 @@ export default {
         this.$message.success(isUpdate ? 'Slot updated.' : 'Slot added.')
         this.fetch()
       })
-    },
-    getName (id) {
-      const speaker = this.speakers.find(speaker => speaker.id === id)
-      return speaker ? speaker.name : id
     },
     confirmRemove (slot) {
       this.$confirm(
@@ -375,6 +580,8 @@ export default {
       // `speakers` comes back from json_decode() and is null for empty slots,
       // which el-select rejects in multiple mode.
       this.form = Object.assign({}, slot, { speakers: slot.speakers || [] })
+      // Everything on a stored slot counts as chosen by the user.
+      this.autoFilled = { name: '', talk_type: '', to: '' }
       this.dialogVisible = true
     },
     fetchSpeakers () {

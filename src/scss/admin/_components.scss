@@ -725,50 +725,291 @@
 
 // Timeline (slots) ----------------------------------------------------------
 
-.eso-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: var(--eso-s3);
+// Slots agenda: time column, connected rail, one compact card per slot.
+
+.eso-agenda__row {
+    display: grid;
+    grid-template-columns: 76px 24px minmax(0, 1fr);
+    column-gap: var(--eso-s2);
+    padding-bottom: var(--eso-s2);
 }
 
-.eso-timeline__row {
-    display: flex;
-    align-items: stretch;
-    gap: var(--eso-s4);
-}
-
-.eso-timeline__time {
-    flex: 0 0 96px;
-    padding-top: var(--eso-s4);
+.eso-agenda__time {
+    padding-top: 10px;
     text-align: right;
     font-size: 12px;
+    line-height: 1.5;
     font-variant-numeric: tabular-nums;
     color: var(--eso-text-muted);
-    line-height: 1.6;
+
+    strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--eso-text);
+    }
 }
 
-.eso-timeline__time strong {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--eso-text);
+.eso-agenda__rail {
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 2px;
+        background: var(--eso-border);
+    }
+
+    .eso-dot {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        box-shadow: 0 0 0 3px #f0f0f1; // ring against the wp-admin page bg
+    }
 }
 
-.eso-timeline__card {
+// The rail line starts at the first dot and stops at the last one.
+.eso-agenda__row:first-child .eso-agenda__rail::before {
+    top: 14px;
+}
+
+.eso-agenda__row:last-child .eso-agenda__rail::before {
+    bottom: auto;
+    height: 20px;
+}
+
+.eso-agenda__card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--eso-s3);
+    padding: var(--eso-s3) var(--eso-s4);
+    background: var(--eso-surface);
+    border: 1px solid var(--eso-border);
+    border-radius: var(--eso-radius-card);
+    box-shadow: var(--eso-shadow);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+    &:hover,
+    &:focus-within {
+        box-shadow: var(--eso-shadow-hover);
+        border-color: #c3c4c7;
+
+        .eso-agenda__actions {
+            opacity: 1;
+        }
+    }
+}
+
+.eso-agenda__main {
     flex: 1 1 auto;
     min-width: 0;
 }
 
-@media screen and (max-width: 782px) {
-    .eso-timeline__row {
-        flex-direction: column;
-        gap: var(--eso-s1);
+.eso-agenda__title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    flex-wrap: wrap;
+}
+
+.eso-agenda__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--eso-text);
+    word-break: break-word;
+}
+
+.eso-agenda__duration {
+    font-size: 12px;
+    color: var(--eso-text-muted);
+}
+
+.eso-agenda__speakers {
+    margin-top: var(--eso-s2);
+}
+
+.eso-agenda__empty {
+    display: block;
+    margin-top: var(--eso-s2);
+    font-size: 12px;
+    font-style: italic;
+    color: var(--eso-text-muted);
+}
+
+// Edit/Delete reveal on hover or keyboard focus.
+.eso-agenda__actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+// Breaks are pauses, not content: dashed, flat and quiet.
+.eso-agenda__row--break .eso-agenda__card {
+    background: #f6f7f7;
+    border-style: dashed;
+    box-shadow: none;
+}
+
+// Talk-type dots, shared by the agenda rail and the sidebar legend.
+.eso-dot {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #c6c8cc;
+}
+
+.eso-dot--panel {
+    background: #8a5fc4;
+}
+
+.eso-dot--keynote {
+    background: #e08a2e;
+}
+
+.eso-dot--semi-keynote {
+    background: #c9a25a;
+}
+
+.eso-dot--lightning {
+    background: #2f9e44;
+}
+
+.eso-dot--break {
+    background: #a7aaad;
+}
+
+// Sidebar legend: talk types with their slot counts.
+.eso-type-list {
+    display: flex;
+    flex-direction: column;
+    padding: var(--eso-s1) 0;
+}
+
+.eso-type-list__item {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    padding: var(--eso-s2) var(--eso-s4);
+
+    & + & {
+        border-top: 1px solid var(--eso-border-subtle);
     }
 
-    .eso-timeline__time {
-        flex: none;
-        text-align: left;
+    em {
+        font-style: normal;
+        font-size: 12px;
+        color: var(--eso-text-muted);
+    }
+}
+
+.eso-type-list__name {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: var(--eso-text-secondary);
+}
+
+// Small square icon buttons (agenda row actions).
+.eso-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--eso-border);
+    border-radius: 6px;
+    background: var(--eso-surface);
+    color: var(--eso-text-secondary);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+
+    i {
+        font-size: 14px;
+    }
+
+    &:hover {
+        color: var(--eso-blue);
+        border-color: var(--eso-blue);
+    }
+}
+
+.eso-icon-btn--danger:hover {
+    color: var(--eso-red);
+    border-color: var(--eso-red);
+}
+
+// Speaker option rows in the slot dialog's picker.
+.eso-speaker-option {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s2);
+    min-width: 0;
+}
+
+.eso-speaker-option__name {
+    flex: 0 0 auto;
+    font-weight: 500;
+}
+
+.eso-speaker-option__topic {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--eso-text-muted);
+}
+
+// Muted helper line under a form field.
+.eso-field-hint {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--eso-text-muted);
+}
+
+// Speaker chips with a tiny gravatar.
+.eso-chip--speaker {
+    gap: 6px;
+    padding-left: 3px;
+}
+
+.eso-chip__avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--eso-border-subtle);
+}
+
+@media screen and (max-width: 782px) {
+    // Narrow screens: drop the rail, put the time above each card.
+    .eso-agenda__row {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--eso-s1);
+    }
+
+    .eso-agenda__rail {
+        display: none;
+    }
+
+    .eso-agenda__time {
+        display: flex;
+        gap: var(--eso-s2);
         padding-top: 0;
+        text-align: left;
+    }
+
+    // Touch has no hover — keep the actions visible.
+    .eso-agenda__actions {
+        opacity: 1;
     }
 }
 
