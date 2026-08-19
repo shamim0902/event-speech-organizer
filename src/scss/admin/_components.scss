@@ -151,6 +151,163 @@
     }
 }
 
+// Single applicant page -----------------------------------------------------
+
+.eso-applicant {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: var(--eso-s4);
+    align-items: start;
+}
+
+@media (max-width: 960px) {
+    .eso-applicant {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.eso-applicant__main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--eso-s4);
+}
+
+.eso-applicant__profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--eso-s2);
+    padding: var(--eso-s5) var(--eso-s4) var(--eso-s4);
+
+    .eso-avatar {
+        width: 72px;
+        height: 72px;
+        flex: 0 0 auto;
+    }
+}
+
+.eso-applicant__name {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--eso-text);
+    word-break: break-word;
+}
+
+.eso-applicant__contact {
+    border-top: 1px solid var(--eso-border-subtle);
+}
+
+.eso-applicant__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--eso-s3);
+    padding: var(--eso-s4);
+    border-top: 1px solid var(--eso-border-subtle);
+    background: #fbfbfc;
+
+    .eso-section-label {
+        margin-bottom: 0;
+    }
+}
+
+// Status selector: three tiles, the active one filled in its status colour.
+
+.eso-status-choices {
+    display: flex;
+    gap: var(--eso-s2);
+}
+
+.eso-status-choice {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 4px 8px;
+    border: 1px solid var(--eso-border);
+    border-radius: 6px;
+    background: var(--eso-surface);
+    color: var(--eso-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+
+    i {
+        font-size: 16px;
+    }
+
+    &:hover {
+        border-color: #c3c4c7;
+        color: var(--eso-text);
+    }
+
+    &.is-active {
+        cursor: default;
+    }
+}
+
+.eso-status-choice--approved.is-active,
+.eso-status-choice--approved:hover {
+    background: #edfaef;
+    border-color: #b8e6c1;
+    color: #007017;
+}
+
+.eso-status-choice--waiting.is-active,
+.eso-status-choice--waiting:hover {
+    background: #fcf9e8;
+    border-color: #f0e2a8;
+    color: #8a6800;
+}
+
+.eso-status-choice--rejected.is-active,
+.eso-status-choice--rejected:hover {
+    background: #fcf0f1;
+    border-color: #f3c0c1;
+    color: #b32d2e;
+}
+
+// Edit / Delete, half width each.
+.eso-applicant__manage {
+    display: flex;
+    gap: var(--eso-s2);
+
+    .el-button {
+        flex: 1 1 0;
+
+        // Element's default sibling spacing fights the flex gap.
+        & + .el-button {
+            margin-left: 0;
+        }
+    }
+}
+
+// Labeled prose sections (talk description, audience, bio …)
+
+.eso-section + .eso-section {
+    margin-top: var(--eso-s4);
+}
+
+.eso-section-label {
+    margin: 0 0 var(--eso-s2);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--eso-text-muted);
+}
+
+.eso-prose {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--eso-text-secondary);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
 // Avatar --------------------------------------------------------------------
 
 .eso-avatar {
@@ -414,13 +571,61 @@
     flex: 1 1 auto;
 }
 
-// Compact search/sort, sitting to the right of the status pills.
+// Compact search/sort, sitting to the right of the status pills. Styled as
+// pills so they read as part of the same row as the status filters.
 .eso-nav__search {
     width: 210px;
 }
 
 .eso-nav__sort {
-    width: 140px;
+    width: 150px;
+}
+
+.eso-nav__search,
+.eso-nav__sort {
+    .el-input__inner {
+        height: 32px;
+        line-height: 32px;
+        border-radius: 16px;
+        border: 1px solid var(--eso-border);
+        background: var(--eso-surface);
+        font-size: 13px;
+        color: var(--eso-text-secondary);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+        &:focus {
+            border-color: var(--eso-blue);
+        }
+    }
+
+    .el-input__icon {
+        line-height: 32px;
+    }
+}
+
+// Inside the nav row everything centers on one line; the standalone top
+// margin of the pill strip would push it below the search/sort inputs.
+.eso-nav .eso-tabs--sub {
+    margin-top: 0;
+}
+
+// The Applicants/Slots switch on the nav's right edge: same pill look as the
+// status filters, not the underlined tab style it inherits from .eso-tabs.
+.eso-nav > .eso-tabs {
+    border-bottom: none;
+
+    .eso-tabs__item {
+        border: 1px solid var(--eso-border);
+        border-radius: 20px;
+        margin-bottom: 0;
+        padding: var(--eso-s1) var(--eso-s3);
+        font-size: 13px;
+        background: var(--eso-surface);
+
+        &:hover {
+            border-color: var(--eso-blue);
+        }
+    }
 }
 
 // Stat tiles ----------------------------------------------------------------

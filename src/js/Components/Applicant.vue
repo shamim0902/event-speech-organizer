@@ -20,120 +20,150 @@
       >
     </empty-state>
 
-    <div class="eso-card" v-if="applicant">
-      <div class="eso-card__header">
-        <img
-          class="eso-avatar"
-          :src="gravatar(applicant.email, '96')"
-          :alt="applicant.name"
-        />
-        <div class="eso-card__header-main">
-          <div class="eso-card__title">{{ applicant.name }}</div>
-          <div class="eso-card__meta">
-            #{{ applicant.id }} · Applied {{ applicant.date || '—' }}
+    <div class="eso-applicant" v-if="applicant">
+      <aside>
+        <div class="eso-card">
+          <div class="eso-applicant__profile">
+            <img
+              class="eso-avatar"
+              :src="gravatar(applicant.email, '144')"
+              :alt="applicant.name"
+            />
+            <div class="eso-applicant__name">{{ applicant.name }}</div>
+            <div class="eso-card__meta">
+              #{{ applicant.id }} · Applied {{ applicant.date || '—' }}
+            </div>
+            <status-badge :status="applicant.status" />
+          </div>
+
+          <div class="eso-card__body eso-applicant__contact">
+            <p class="eso-section-label">Contact</p>
+            <ul class="eso-meta-list">
+              <li class="eso-meta-list__item" v-if="applicant.email">
+                <i class="el-icon-message"></i>
+                <a :href="'mailto:' + applicant.email">{{ applicant.email }}</a>
+              </li>
+              <li class="eso-meta-list__item" v-if="applicant.phone">
+                <i class="el-icon-phone-outline"></i>
+                <a :href="'tel:' + applicant.phone">{{ applicant.phone }}</a>
+              </li>
+              <li class="eso-meta-list__item" v-if="applicant.social">
+                <i class="el-icon-share"></i>
+                <a target="_blank" rel="noopener" :href="applicant.social">{{
+                  applicant.social
+                }}</a>
+              </li>
+              <li class="eso-meta-list__item" v-if="applicant.username">
+                <i class="el-icon-link"></i>
+                <a
+                  target="_blank"
+                  rel="noopener"
+                  :href="wpProfile(applicant.username)"
+                  >{{ applicant.username }}</a
+                >
+              </li>
+              <li class="eso-meta-list__item" v-if="!hasContact">
+                <span>No contact details</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="eso-applicant__actions">
+            <p class="eso-section-label">Status</p>
+
+            <div class="eso-status-choices">
+              <button
+                v-for="choice in statusChoices"
+                :key="choice.status"
+                type="button"
+                class="eso-status-choice"
+                :class="[
+                  'eso-status-choice--' + choice.status,
+                  { 'is-active': applicant.status === choice.status }
+                ]"
+                @click="updateStatus(choice.status)"
+              >
+                <i :class="choice.icon"></i>
+                <span>{{ choice.label }}</span>
+              </button>
+            </div>
+
+            <div class="eso-applicant__manage">
+              <el-button
+                size="small"
+                icon="el-icon-edit"
+                @click="editModal = true"
+                >Edit</el-button
+              >
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                icon="el-icon-delete"
+                @click="confirmRemove"
+                >Delete</el-button
+              >
+            </div>
           </div>
         </div>
-        <status-badge :status="applicant.status" />
-      </div>
+      </aside>
 
-      <div class="eso-card__body">
-        <h3 v-if="applicant.topic">{{ applicant.topic }}</h3>
+      <main class="eso-applicant__main">
+        <div class="eso-card">
+          <div class="eso-card__header">
+            <div class="eso-card__header-main">
+              <div class="eso-card__title">
+                {{ applicant.topic || 'Untitled talk' }}
+              </div>
+            </div>
+            <span class="eso-badge eso-badge--count" v-if="applicant.type">{{
+              applicant.type
+            }}</span>
+          </div>
 
-        <ul class="eso-meta-list eso-card__contact">
-          <li class="eso-meta-list__item" v-if="applicant.email">
-            <i class="el-icon-message"></i>
-            <a :href="'mailto:' + applicant.email">{{ applicant.email }}</a>
-          </li>
-          <li class="eso-meta-list__item" v-if="applicant.phone">
-            <i class="el-icon-phone-outline"></i>
-            <a :href="'tel:' + applicant.phone">{{ applicant.phone }}</a>
-          </li>
-          <li class="eso-meta-list__item" v-if="applicant.social">
-            <i class="el-icon-share"></i>
-            <a target="_blank" rel="noopener" :href="applicant.social">{{
-              applicant.social
-            }}</a>
-          </li>
-          <li class="eso-meta-list__item" v-if="applicant.username">
-            <i class="el-icon-link"></i>
-            <a target="_blank" rel="noopener" :href="wpProfile(applicant.username)">{{
-              applicant.username
-            }}</a>
-          </li>
-        </ul>
+          <div class="eso-card__body">
+            <div class="eso-section" v-if="applicant.description">
+              <p class="eso-section-label">Description</p>
+              <p class="eso-prose">{{ applicant.description }}</p>
+            </div>
 
-        <dl class="eso-detail-list" style="margin-top: 16px">
-          <template v-if="applicant.comment">
-            <dt>Bio</dt>
-            <dd>{{ applicant.comment }}</dd>
-          </template>
-          <template v-if="applicant.description">
-            <dt>Description</dt>
-            <dd>{{ applicant.description }}</dd>
-          </template>
-          <template v-if="applicant.type">
-            <dt>Type</dt>
-            <dd>{{ applicant.type }}</dd>
-          </template>
-          <template v-if="applicant.cospeakers">
-            <dt>Co-speakers</dt>
-            <dd>{{ applicant.cospeakers }}</dd>
-          </template>
-          <template v-if="applicant.audience">
-            <dt>Audience</dt>
-            <dd>{{ applicant.audience }}</dd>
-          </template>
-          <template v-if="applicant.experience">
-            <dt>Experience</dt>
-            <dd>{{ applicant.experience }}</dd>
-          </template>
-        </dl>
-      </div>
+            <div class="eso-section" v-if="applicant.cospeakers">
+              <p class="eso-section-label">Co-speakers</p>
+              <p class="eso-prose">{{ applicant.cospeakers }}</p>
+            </div>
 
-      <div class="eso-card__footer">
-        <el-button-group>
-          <el-button
-            plain
-            type="success"
-            size="mini"
-            :disabled="applicant.status === 'approved'"
-            @click="updateStatus('approved')"
-          >
-            Approve
-          </el-button>
-          <el-button
-            plain
-            type="info"
-            size="mini"
-            :disabled="applicant.status === 'waiting'"
-            @click="updateStatus('waiting')"
-          >
-            Waitlist
-          </el-button>
-          <el-button
-            plain
-            type="danger"
-            size="mini"
-            :disabled="applicant.status === 'rejected'"
-            @click="updateStatus('rejected')"
-          >
-            Reject
-          </el-button>
-        </el-button-group>
+            <div class="eso-section" v-if="applicant.audience">
+              <p class="eso-section-label">Intended audience</p>
+              <p class="eso-prose">{{ applicant.audience }}</p>
+            </div>
 
-        <span class="eso-link-actions">
-          <button class="eso-link-btn" type="button" @click="editModal = true">
-            <i class="el-icon-edit"></i> Edit
-          </button>
-          <button
-            class="eso-link-btn eso-link-btn--danger"
-            type="button"
-            @click="confirmRemove"
-          >
-            <i class="el-icon-delete"></i> Delete
-          </button>
-        </span>
-      </div>
+            <div class="eso-section" v-if="applicant.experience">
+              <p class="eso-section-label">Speaking experience</p>
+              <p class="eso-prose">{{ applicant.experience }}</p>
+            </div>
+
+            <div class="eso-section" v-if="applicant.question">
+              <p class="eso-section-label">Question</p>
+              <p class="eso-prose">{{ applicant.question }}</p>
+            </div>
+
+            <p class="eso-prose" v-if="!hasTalkDetails">
+              No talk details were provided.
+            </p>
+          </div>
+        </div>
+
+        <div class="eso-card" v-if="applicant.comment">
+          <div class="eso-card__header">
+            <div class="eso-card__header-main">
+              <div class="eso-card__title">Speaker bio</div>
+            </div>
+          </div>
+          <div class="eso-card__body">
+            <p class="eso-prose">{{ applicant.comment }}</p>
+          </div>
+        </div>
+      </main>
     </div>
 
     <applicant-form-dialog
@@ -163,7 +193,12 @@ export default {
     return {
       applicant: null,
       loading: false,
-      editModal: false
+      editModal: false,
+      statusChoices: [
+        { status: 'approved', label: 'Approve', icon: 'el-icon-circle-check' },
+        { status: 'waiting', label: 'Waitlist', icon: 'el-icon-time' },
+        { status: 'rejected', label: 'Reject', icon: 'el-icon-circle-close' }
+      ]
     }
   },
   computed: {
@@ -172,6 +207,20 @@ export default {
     },
     applicantId () {
       return this.$route.params.applicantId
+    },
+    hasContact () {
+      const applicant = this.applicant || {}
+      return !!(applicant.email || applicant.phone || applicant.social || applicant.username)
+    },
+    hasTalkDetails () {
+      const applicant = this.applicant || {}
+      return !!(
+        applicant.description ||
+        applicant.cospeakers ||
+        applicant.audience ||
+        applicant.experience ||
+        applicant.question
+      )
     }
   },
   methods: {
@@ -238,6 +287,10 @@ export default {
         })
     },
     updateStatus (status) {
+      if (this.applicant.status === status) {
+        return
+      }
+
       this.$set(this.applicant, 'status', status)
 
       this.$post({

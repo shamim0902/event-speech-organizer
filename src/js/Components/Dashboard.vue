@@ -6,7 +6,7 @@
       :back-to="{ name: 'events', query: { all: '1' } }"
       back-label="All events"
     >
-      <template slot="actions">
+      <template slot="actions" v-if="!isSingleApplicant">
         <el-dropdown trigger="click" @command="onMenuCommand">
           <el-button size="small" icon="el-icon-more" circle></el-button>
           <el-dropdown-menu slot="dropdown">
@@ -71,6 +71,11 @@ export default {
     },
     isApplicantList () {
       return ['applicants', 'selected', 'waiting', 'rejected'].indexOf(this.$route.name) > -1
+    },
+    // The single applicant page has its own actions; the event-level menu
+    // would only distract there.
+    isSingleApplicant () {
+      return this.$route.name === 'applicant'
     },
     eventTitle () {
       return this.event ? this.event.title : 'Loading…'
