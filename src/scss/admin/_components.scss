@@ -440,6 +440,28 @@
     color: #b32d2e;
 }
 
+// Approved applicants not yet assigned to any slot.
+.eso-badge--needs-slot {
+    background: #f4f1fb;
+    border-color: #d8ccf1;
+    color: #5a3ea6;
+}
+
+// Status badge plus the needs-slot tag, stacked in the table…
+.eso-status-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+// …but side by side in the applicant profile, where they are centered.
+.eso-status-stack--row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
 // Talk types
 .eso-badge--panel {
     background: #f2ecfb;
@@ -611,7 +633,10 @@
 
 // The Applicants/Slots switch on the nav's right edge: same pill look as the
 // status filters, not the underlined tab style it inherits from .eso-tabs.
-.eso-nav > .eso-tabs {
+// :not() keeps this off the status pill strip itself — that strip is also a
+// direct .eso-tabs child of the nav, and an unscoped background here would
+// paint over the active pill's blue fill, leaving white text on white.
+.eso-nav > .eso-tabs:not(.eso-tabs--sub) {
     border-bottom: none;
 
     .eso-tabs__item {

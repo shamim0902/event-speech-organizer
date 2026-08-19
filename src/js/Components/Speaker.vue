@@ -125,7 +125,15 @@
 
         <el-table-column label="Status" width="120">
           <template slot-scope="scope">
-            <status-badge :status="scope.row.status" />
+            <div class="eso-status-stack">
+              <status-badge :status="scope.row.status" />
+              <span
+                v-if="needsSlot(scope.row)"
+                class="eso-badge eso-badge--needs-slot"
+                title="Approved but not assigned to any slot yet"
+                >Slot required</span
+              >
+            </div>
           </template>
         </el-table-column>
 
@@ -187,7 +195,7 @@ import StatusBadge from './Common/StatusBadge.vue'
 import ImportDialog from './ImportDialog.vue'
 import ApplicantFormDialog from './ApplicantFormDialog.vue'
 import { IMPORT_FIELDS, toCsv } from './Common/csv'
-import { gravatarUrl, wpProfileUrl } from './Common/applicantHelpers'
+import { gravatarUrl, wpProfileUrl, loadAssignedSpeakerIds } from './Common/applicantHelpers'
 import listState from './Common/listState'
 
 const STATUS_ORDER = { approved: 0, waiting: 1, rejected: 2 }
@@ -204,7 +212,8 @@ export default {
     return {
       speakerModal: false,
       importModal: false,
-      listState
+      listState,
+      assignedSpeakerIds: []
     }
   },
   props: {
@@ -261,6 +270,17 @@ export default {
   methods: {
     add () {
       this.speakerModal = true
+    },
+    fetchSlots () {
+      loadAssignedSpeakerIds(this.$get, this.eventId).then(ids => {
+        this.assignedSpeakerIds = ids
+      })
+    },
+    needsSlot (speaker) {
+      return (
+        speaker.status === 'approved' &&
+        this.assignedSpeakerIds.indexOf(String(speaker.id)) === -1
+      )
     },
     /**
      * Import / Download / Add moved into the event page's 3-dot menu, which
@@ -350,7 +370,14 @@ export default {
     get_gravatar_image_url: gravatarUrl,
     wpProfile: wpProfileUrl
   },
+  watch: {
+    // vue-router reuses the component when only the event id changes.
+    eventId () {
+      this.fetchSlots()
+    }
+  },
   mounted () {
+    this.fetchSlots()
     window.eventSpeechOrganizerBus.$on('applicant-list-action', this.onListAction)
   },
   beforeDestroy () {

@@ -15,6 +15,29 @@ export function gravatarUrl (email, size) {
   )
 }
 
+/**
+ * Applicant ids assigned to any slot of an event, as strings. Slots may also
+ * hold free-typed speaker names; those simply never match an id.
+ *
+ * @param request the caller's $get mixin method
+ */
+export function loadAssignedSpeakerIds (request, eventId) {
+  return request({
+    action: 'event_speech_organizer_admin_ajax',
+    route: 'get_slots',
+    event_id: eventId
+  }).then(response => {
+    const ids = []
+
+    const slots = (response && response.data) || []
+    slots.forEach(slot => {
+      (slot.speakers || []).forEach(speaker => ids.push(String(speaker)))
+    })
+
+    return ids
+  })
+}
+
 export function wpProfileUrl (username) {
   username = username || ''
 

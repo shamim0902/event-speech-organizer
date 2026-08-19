@@ -33,7 +33,15 @@
             <div class="eso-card__meta">
               #{{ applicant.id }} · Applied {{ applicant.date || '—' }}
             </div>
-            <status-badge :status="applicant.status" />
+            <div class="eso-status-stack eso-status-stack--row">
+              <status-badge :status="applicant.status" />
+              <span
+                v-if="needsSlot"
+                class="eso-badge eso-badge--needs-slot"
+                title="Approved but not assigned to any slot yet"
+                >Slot required</span
+              >
+            </div>
           </div>
 
           <div class="eso-card__body eso-applicant__contact">
@@ -180,7 +188,7 @@
 import EmptyState from './Common/EmptyState.vue'
 import StatusBadge from './Common/StatusBadge.vue'
 import ApplicantFormDialog from './ApplicantFormDialog.vue'
-import { gravatarUrl, wpProfileUrl } from './Common/applicantHelpers'
+import { gravatarUrl, wpProfileUrl, loadAssignedSpeakerIds } from './Common/applicantHelpers'
 
 export default {
   name: 'Applicant',
@@ -194,6 +202,7 @@ export default {
       applicant: null,
       loading: false,
       editModal: false,
+      assignedSpeakerIds: [],
       statusChoices: [
         { status: 'approved', label: 'Approve', icon: 'el-icon-circle-check' },
         { status: 'waiting', label: 'Waitlist', icon: 'el-icon-time' },
@@ -207,6 +216,13 @@ export default {
     },
     applicantId () {
       return this.$route.params.applicantId
+    },
+    needsSlot () {
+      return (
+        this.applicant &&
+        this.applicant.status === 'approved' &&
+        this.assignedSpeakerIds.indexOf(String(this.applicant.id)) === -1
+      )
     },
     hasContact () {
       const applicant = this.applicant || {}
@@ -226,8 +242,14 @@ export default {
   methods: {
     gravatar: gravatarUrl,
     wpProfile: wpProfileUrl,
+    fetchSlots () {
+      loadAssignedSpeakerIds(this.$get, this.eventId).then(ids => {
+        this.assignedSpeakerIds = ids
+      })
+    },
     fetch () {
       this.loading = true
+      this.fetchSlots()
 
       // There is no single-applicant ajax route; the event's list is small
       // enough to fetch and pick from, and it stays scoped to this event.
