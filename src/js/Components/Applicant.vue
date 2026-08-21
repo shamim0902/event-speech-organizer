@@ -136,6 +136,7 @@
                 :key="choice.status"
                 type="button"
                 class="eso-status-choice"
+                :disabled="statusSaving"
                 :class="[
                   'eso-status-choice--' + choice.status,
                   { 'is-active': applicant.status === choice.status }
@@ -256,6 +257,8 @@ export default {
       editModal: false,
       deleteVisible: false,
       deleting: false,
+      statusSaving: false,
+      confirmingStatus: false,
       assignedSpeakerIds: [],
       statusChoices: [
         { status: 'approved', label: 'Approve', icon: 'el-icon-circle-check' },
@@ -378,12 +381,12 @@ export default {
         target &&
         (target.isContentEditable ||
           /^(input|textarea|select)$/i.test(target.tagName || '') ||
-          (target.closest && target.closest('.el-dialog, .el-select-dropdown')))
+          (target.closest && target.closest('.el-dialog, .el-select-dropdown, .el-message-box')))
       ) {
         return
       }
 
-      if (this.editModal || this.deleteVisible) {
+      if (this.editModal || this.deleteVisible || this.confirmingStatus) {
         return
       }
 
@@ -451,12 +454,62 @@ export default {
           this.deleting = false
         })
     },
+    /**
+     * Status is what the applicant hears about, so confirm before sending it.
+     */
     updateStatus (status) {
-      if (this.applicant.status === status) {
+      if (this.applicant.status === status || this.statusSaving) {
         return
       }
 
+      const prompts = {
+        approved: {
+          message: 'Approve "' + this.applicant.name + '" as a speaker?',
+          title: 'Approve applicant',
+          confirmButtonText: 'Approve',
+          type: 'success'
+        },
+        waiting: {
+          message: 'Move "' + this.applicant.name + '" to the waitlist?',
+          title: 'Waitlist applicant',
+          confirmButtonText: 'Move to waitlist',
+          type: 'warning'
+        },
+        rejected: {
+          message: 'Reject "' + this.applicant.name + '"?',
+          title: 'Reject applicant',
+          confirmButtonText: 'Reject',
+          type: 'warning'
+        }
+      }
+
+      const prompt = prompts[status]
+
+      this.confirmingStatus = true
+
+      this.$confirm(prompt.message, prompt.title, {
+        confirmButtonText: prompt.confirmButtonText,
+        cancelButtonText: 'Cancel',
+        type: prompt.type
+      })
+        .then(() => this.applyStatus(status))
+        .catch(() => {})
+        .then(() => {
+          this.confirmingStatus = false
+        })
+    },
+    applyStatus (status) {
+      // Show the new status straight away, but keep the old one so a failed
+      // save does not leave the page lying about it.
+      const previous = this.applicant.status
+
       this.$set(this.applicant, 'status', status)
+      this.statusSaving = true
+
+      const revert = message => {
+        this.$set(this.applicant, 'status', previous)
+        this.$message.error(message || 'Could not update the status.')
+      }
 
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
@@ -466,10 +519,27 @@ export default {
           id: this.applicant.id,
           status: status
         }
-      }).then(() => {
-        this.$message.success(this.applicant.name + ' marked as ' + status + '.')
-        window.eventSpeechOrganizerBus.$emit('applicants-updated')
       })
+        .then(response => {
+          if (response && response.status === false) {
+            revert(response.message)
+            return
+          }
+
+          this.$message.success(this.applicant.name + ' marked as ' + status + '.')
+          window.eventSpeechOrganizerBus.$emit('applicants-updated')
+          this.fetchSlots()
+        })
+        .fail(xhr => {
+          revert(
+            xhr && xhr.responseJSON && xhr.responseJSON.message
+              ? xhr.responseJSON.message
+              : ''
+          )
+        })
+        .always(() => {
+          this.statusSaving = false
+        })
     }
   },
   watch: {

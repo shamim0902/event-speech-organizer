@@ -246,6 +246,11 @@
     &.is-active {
         cursor: default;
     }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: progress;
+    }
 }
 
 .eso-status-choice--approved.is-active,
@@ -1180,4 +1185,33 @@
     // Current status stays listed but clearly inert, whatever its colour.
     color: var(--eso-text-muted) !important;
     background: transparent !important;
+}
+
+// Share schedule dialog -----------------------------------------------------
+
+.eso-share__row {
+    display: flex;
+    gap: var(--eso-s2);
+    margin: var(--eso-s4) 0;
+}
+
+.eso-share__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--eso-s4);
+    padding: var(--eso-s3) 0 var(--eso-s3);
+    border-top: 1px solid var(--eso-border-subtle);
+
+    .eso-section-label {
+        margin-bottom: 2px;
+    }
+
+    .eso-field-hint {
+        margin: 0;
+    }
+}
+
+.eso-share__revoke {
+    margin-top: var(--eso-s2);
 }
