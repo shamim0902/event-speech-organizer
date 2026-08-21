@@ -16,7 +16,9 @@
           class="eso-icon-btn eso-icon-btn--label"
           type="button"
           :disabled="!previous"
-          :title="previous ? 'Previous: ' + previous.name : 'No previous applicant'"
+          :title="
+            previous ? 'Previous: ' + previous.name + ' (←)' : 'No previous applicant'
+          "
           @click="go(previous)"
         >
           <i class="el-icon-arrow-left"></i> <span>Prev</span>
@@ -25,7 +27,7 @@
           class="eso-icon-btn eso-icon-btn--label"
           type="button"
           :disabled="!next"
-          :title="next ? 'Next: ' + next.name : 'No next applicant'"
+          :title="next ? 'Next: ' + next.name + ' (→)' : 'No next applicant'"
           @click="go(next)"
         >
           <span>Next</span> <i class="el-icon-arrow-right"></i>
@@ -360,6 +362,44 @@ export default {
           this.loading = false
         })
     },
+    /**
+     * Left/right arrows (or j/k) page between applicants. Ignored while the
+     * user is typing, holding a modifier, or working inside a dialog — the
+     * edit form and the delete confirm both need their own key handling.
+     */
+    onKeydown (event) {
+      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
+        return
+      }
+
+      const target = event.target
+
+      if (
+        target &&
+        (target.isContentEditable ||
+          /^(input|textarea|select)$/i.test(target.tagName || '') ||
+          (target.closest && target.closest('.el-dialog, .el-select-dropdown')))
+      ) {
+        return
+      }
+
+      if (this.editModal || this.deleteVisible) {
+        return
+      }
+
+      let applicant = null
+
+      if (event.key === 'ArrowLeft' || event.key === 'k') {
+        applicant = this.previous
+      } else if (event.key === 'ArrowRight' || event.key === 'j') {
+        applicant = this.next
+      } else {
+        return
+      }
+
+      event.preventDefault()
+      this.go(applicant)
+    },
     go (applicant) {
       if (!applicant) {
         return
@@ -452,6 +492,10 @@ export default {
   },
   mounted () {
     this.fetch()
+    document.addEventListener('keydown', this.onKeydown)
+  },
+  beforeDestroy () {
+    document.removeEventListener('keydown', this.onKeydown)
   }
 }
 </script>
