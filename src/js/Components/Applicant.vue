@@ -12,26 +12,30 @@
         <span class="eso-applicant__position" v-if="siblings.length > 1">
           {{ position }} of {{ siblings.length }}
         </span>
-        <button
-          class="eso-icon-btn eso-icon-btn--label"
-          type="button"
-          :disabled="!previous"
-          :title="
-            previous ? 'Previous: ' + previous.name + ' (←)' : 'No previous applicant'
-          "
-          @click="go(previous)"
-        >
-          <i class="el-icon-arrow-left"></i> <span>Prev</span>
-        </button>
-        <button
-          class="eso-icon-btn eso-icon-btn--label"
-          type="button"
-          :disabled="!next"
-          :title="next ? 'Next: ' + next.name + ' (→)' : 'No next applicant'"
-          @click="go(next)"
-        >
-          <span>Next</span> <i class="el-icon-arrow-right"></i>
-        </button>
+        <el-tooltip effect="dark" placement="bottom" :content="previousHint">
+          <span>
+            <button
+              class="eso-icon-btn eso-icon-btn--label"
+              type="button"
+              :disabled="!previous"
+              @click="go(previous)"
+            >
+              <i class="el-icon-arrow-left"></i> <span>Prev</span>
+            </button>
+          </span>
+        </el-tooltip>
+        <el-tooltip effect="dark" placement="bottom" :content="nextHint">
+          <span>
+            <button
+              class="eso-icon-btn eso-icon-btn--label"
+              type="button"
+              :disabled="!next"
+              @click="go(next)"
+            >
+              <span>Next</span> <i class="el-icon-arrow-right"></i>
+            </button>
+          </span>
+        </el-tooltip>
       </div>
 
       <el-dropdown
@@ -71,7 +75,8 @@
       >
     </empty-state>
 
-    <div class="eso-applicant" v-if="applicant">
+    <transition :name="'eso-slide-' + direction" mode="out-in">
+    <div class="eso-applicant" v-if="applicant" :key="applicant.id">
       <aside>
         <div class="eso-card">
           <div class="eso-applicant__profile">
@@ -210,6 +215,7 @@
         </div>
       </main>
     </div>
+    </transition>
 
     <confirm-delete-dialog
       v-if="applicant"
@@ -260,6 +266,9 @@ export default {
       deleteVisible: false,
       deleting: false,
       statusSaving: false,
+      // Which way the last move went, so the new page slides in from the
+      // side it came from.
+      direction: 'next',
       confirmingStatus: false,
       assignedSpeakerIds: [],
       statusChoices: [
@@ -306,6 +315,16 @@ export default {
     },
     position () {
       return this.currentIndex + 1
+    },
+    previousHint () {
+      return this.previous
+        ? 'Previous: ' + this.previous.name + ' — or press ←'
+        : 'No previous applicant — press ← or → to move through the list'
+    },
+    nextHint () {
+      return this.next
+        ? 'Next: ' + this.next.name + ' — or press →'
+        : 'No next applicant — press ← or → to move through the list'
     },
     previous () {
       return this.currentIndex > 0 ? this.siblings[this.currentIndex - 1] : null
@@ -417,6 +436,8 @@ export default {
       if (!applicant) {
         return
       }
+
+      this.direction = this.next && applicant.id === this.next.id ? 'next' : 'prev'
 
       this.$router.push({
         name: 'applicant',

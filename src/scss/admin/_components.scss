@@ -293,6 +293,12 @@
     display: inline-flex;
     align-items: center;
     gap: var(--eso-s2);
+
+    // el-tooltip needs an element it can bind to, and a disabled button does
+    // not emit hover events — so each button sits in a span.
+    > span {
+        display: inline-flex;
+    }
 }
 
 .eso-applicant__position {
@@ -1335,4 +1341,43 @@
     font-size: 13px;
     color: var(--eso-text);
     white-space: nowrap;
+}
+
+// Applicant paging transition -----------------------------------------------
+
+.eso-slide-next-enter-active,
+.eso-slide-next-leave-active,
+.eso-slide-prev-enter-active,
+.eso-slide-prev-leave-active {
+    transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.eso-slide-next-enter {
+    transform: translateX(22px);
+    opacity: 0;
+}
+
+.eso-slide-next-leave-to {
+    transform: translateX(-22px);
+    opacity: 0;
+}
+
+.eso-slide-prev-enter {
+    transform: translateX(-22px);
+    opacity: 0;
+}
+
+.eso-slide-prev-leave-to {
+    transform: translateX(22px);
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .eso-slide-next-enter-active,
+    .eso-slide-next-leave-active,
+    .eso-slide-prev-enter-active,
+    .eso-slide-prev-leave-active {
+        transition: opacity 0.12s ease;
+        transform: none !important;
+    }
 }
