@@ -290,15 +290,6 @@
     gap: var(--eso-s2);
 }
 
-// Icon button that carries a text label too (Prev / Next).
-.eso-icon-btn--label {
-    width: auto;
-    gap: 4px;
-    padding: 0 10px;
-    font-size: 13px;
-    font-weight: 500;
-}
-
 .eso-applicant__position {
     font-size: 12px;
     color: var(--eso-text-muted);
@@ -969,6 +960,20 @@
 .eso-icon-btn--danger:hover {
     color: var(--eso-red);
     border-color: var(--eso-red);
+}
+
+// Icon button that carries a text label too (Prev / Next). Must come after
+// the base rule — same specificity, so source order decides the width.
+.eso-icon-btn--label {
+    width: auto;
+    min-width: 0;
+    flex: 0 0 auto;
+    gap: 4px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 // Speaker option rows in the slot dialog's picker.
