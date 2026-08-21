@@ -290,6 +290,15 @@
     gap: var(--eso-s2);
 }
 
+// Icon button that carries a text label too (Prev / Next).
+.eso-icon-btn--label {
+    width: auto;
+    gap: 4px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
 .eso-applicant__position {
     font-size: 12px;
     color: var(--eso-text-muted);

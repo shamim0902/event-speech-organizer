@@ -13,22 +13,22 @@
           {{ position }} of {{ siblings.length }}
         </span>
         <button
-          class="eso-icon-btn"
+          class="eso-icon-btn eso-icon-btn--label"
           type="button"
           :disabled="!previous"
           :title="previous ? 'Previous: ' + previous.name : 'No previous applicant'"
           @click="go(previous)"
         >
-          <i class="el-icon-arrow-left"></i>
+          <i class="el-icon-arrow-left"></i> <span>Prev</span>
         </button>
         <button
-          class="eso-icon-btn"
+          class="eso-icon-btn eso-icon-btn--label"
           type="button"
           :disabled="!next"
           :title="next ? 'Next: ' + next.name : 'No next applicant'"
           @click="go(next)"
         >
-          <i class="el-icon-arrow-right"></i>
+          <span>Next</span> <i class="el-icon-arrow-right"></i>
         </button>
       </div>
 
