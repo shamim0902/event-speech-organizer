@@ -1057,3 +1057,96 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+// Dropdown menus ------------------------------------------------------------
+
+.el-dropdown-menu__item.eso-dropdown-item--danger {
+    color: var(--eso-red);
+
+    &:hover,
+    &:focus {
+        color: #b32d2e;
+        background: #fdf0f0;
+    }
+}
+
+// Type-to-confirm delete dialog ---------------------------------------------
+
+.eso-confirm {
+    .el-dialog__body {
+        padding-top: var(--eso-s3);
+    }
+}
+
+.eso-confirm__body {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--eso-s3);
+    margin-bottom: var(--eso-s4);
+}
+
+.eso-confirm__icon {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #fdf0f0;
+    color: var(--eso-red);
+
+    i {
+        font-size: 18px;
+    }
+}
+
+.eso-confirm__text {
+    min-width: 0;
+}
+
+.eso-confirm__message {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--eso-text);
+    word-break: break-word;
+}
+
+.eso-confirm__hint {
+    margin: var(--eso-s1) 0 0;
+    font-size: 13px;
+    color: var(--eso-text-muted);
+    line-height: 1.5;
+}
+
+.eso-confirm__label {
+    display: block;
+    margin-bottom: var(--eso-s2);
+    font-size: 13px;
+    color: var(--eso-text-secondary);
+
+    code {
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: var(--eso-surface-muted, #f0f0f1);
+        font-size: 12px;
+        color: var(--eso-text);
+    }
+}
+
+.el-dropdown-menu__item.eso-dropdown-item--success {
+    color: var(--eso-green, #00a32a);
+
+    &:hover,
+    &:focus {
+        color: #007a1f;
+        background: #edfaef;
+    }
+}
+
+.el-dropdown-menu__item.is-disabled {
+    // Current status stays listed but clearly inert, whatever its colour.
+    color: var(--eso-text-muted) !important;
+    background: transparent !important;
+}

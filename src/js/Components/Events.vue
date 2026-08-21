@@ -74,16 +74,27 @@
                 >
                   <i class="el-icon-time"></i> Slots
                 </router-link>
-                <button class="eso-link-btn" type="button" @click="edit(event)">
-                  <i class="el-icon-edit"></i> Edit
-                </button>
-                <button
-                  class="eso-link-btn eso-link-btn--danger"
-                  type="button"
-                  @click="confirmRemove(event)"
+                <el-dropdown
+                  trigger="click"
+                  placement="bottom-end"
+                  @command="onMenuCommand($event, event)"
                 >
-                  <i class="el-icon-delete"></i> Delete
-                </button>
+                  <button class="eso-icon-btn" type="button" title="More actions">
+                    <i class="el-icon-more"></i>
+                  </button>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item command="edit" icon="el-icon-edit"
+                      >Edit event</el-dropdown-item
+                    >
+                    <el-dropdown-item
+                      command="delete"
+                      icon="el-icon-delete"
+                      class="eso-dropdown-item--danger"
+                      divided
+                      >Delete event</el-dropdown-item
+                    >
+                  </el-dropdown-menu>
+                </el-dropdown>
               </span>
             </div>
           </div>
@@ -145,12 +156,22 @@
         >
       </span>
     </el-dialog>
+
+    <confirm-delete-dialog
+      :visible.sync="deleteVisible"
+      title="Delete event"
+      :message="deleteMessage"
+      :hint="deleteHint"
+      :loading="deleting"
+      @confirm="remove"
+    />
   </div>
 </template>
 
 <script>
 import PageHeader from './Common/PageHeader.vue'
 import EmptyState from './Common/EmptyState.vue'
+import ConfirmDeleteDialog from './Common/ConfirmDeleteDialog.vue'
 
 const emptyForm = () => ({
   title: '',
@@ -164,7 +185,8 @@ export default {
   name: 'Events',
   components: {
     PageHeader,
-    EmptyState
+    EmptyState,
+    ConfirmDeleteDialog
   },
   data () {
     return {
@@ -173,12 +195,32 @@ export default {
       redirecting: false,
       saving: false,
       dialogVisible: false,
-      form: emptyForm()
+      form: emptyForm(),
+      deleteVisible: false,
+      deleting: false,
+      deleteTarget: null
     }
   },
   computed: {
     dialogTitle () {
       return this.form.id ? 'Edit event' : 'Add event'
+    },
+    deleteMessage () {
+      return this.deleteTarget ? 'Delete "' + this.deleteTarget.title + '"?' : ''
+    },
+    deleteHint () {
+      const event = this.deleteTarget
+      if (!event) {
+        return ''
+      }
+      if (event.applicants > 0 || event.slots > 0) {
+        return (
+          'Its ' + event.applicants + ' applicant' + (event.applicants == 1 ? '' : 's') +
+          ' and ' + event.slots + ' slot' + (event.slots == 1 ? '' : 's') +
+          ' will be deleted too. This cannot be undone.'
+        )
+      }
+      return 'This cannot be undone.'
     }
   },
   methods: {
@@ -259,33 +301,48 @@ export default {
           this.saving = false
         })
     },
-    confirmRemove (event) {
-      const hasContent = event.applicants > 0 || event.slots > 0
-
-      const message = hasContent
-        ? 'Delete "' + event.title + '"? Its ' + event.applicants +
-          ' applicant(s) and ' + event.slots + ' slot(s) will be deleted too.'
-        : 'Delete "' + event.title + '"? This cannot be undone.'
-
-      this.$confirm(message, 'Delete event', {
-        confirmButtonText: 'Delete',
-        cancelButtonText: 'Cancel',
-        type: 'warning'
-      })
-        .then(() => this.remove(event))
-        .catch(() => {})
+    onMenuCommand (command, event) {
+      if (command === 'edit') {
+        this.edit(event)
+      } else if (command === 'delete') {
+        this.confirmRemove(event)
+      }
     },
-    remove (event) {
+    confirmRemove (event) {
+      this.deleteTarget = event
+      this.deleteVisible = true
+    },
+    remove () {
+      const event = this.deleteTarget
+      if (!event) {
+        return
+      }
+
+      this.deleting = true
+
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
         route: 'delete_event',
         nonce: window.eventSpeechOrganizerAdmin.nonce,
         id: event.id,
         with_content: true
-      }).then(() => {
-        this.$message.success('Event deleted.')
-        this.fetch()
       })
+        .then(() => {
+          this.deleteVisible = false
+          this.deleteTarget = null
+          this.$message.success('Event deleted.')
+          this.fetch()
+        })
+        .fail(xhr => {
+          const message =
+            xhr && xhr.responseJSON && xhr.responseJSON.message
+              ? xhr.responseJSON.message
+              : 'Could not delete the event.'
+          this.$message.error(message)
+        })
+        .always(() => {
+          this.deleting = false
+        })
     }
   },
   watch: {

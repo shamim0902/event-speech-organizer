@@ -137,37 +137,39 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Actions" width="280" align="right">
+        <el-table-column label="Actions" width="90" align="right">
           <template slot-scope="scope">
-            <el-button-group>
-              <el-button
-                plain
-                type="success"
-                size="mini"
-                :disabled="scope.row.status === 'approved'"
-                @click="updateStatus(scope.row, 'approved')"
-              >
-                Approve
-              </el-button>
-              <el-button
-                plain
-                type="info"
-                size="mini"
-                :disabled="scope.row.status === 'waiting'"
-                @click="updateStatus(scope.row, 'waiting')"
-              >
-                Waitlist
-              </el-button>
-              <el-button
-                plain
-                type="danger"
-                size="mini"
-                :disabled="scope.row.status === 'rejected'"
-                @click="updateStatus(scope.row, 'rejected')"
-              >
-                Reject
-              </el-button>
-            </el-button-group>
+            <el-dropdown
+              trigger="click"
+              placement="bottom-end"
+              @command="updateStatus(scope.row, $event)"
+            >
+              <button class="eso-icon-btn" type="button" title="Change status">
+                <i class="el-icon-more"></i>
+              </button>
+              <el-dropdown-menu slot="dropdown" class="eso-status-menu">
+                <el-dropdown-item
+                  command="approved"
+                  icon="el-icon-check"
+                  class="eso-dropdown-item--success"
+                  :disabled="scope.row.status === 'approved'"
+                  >Approve</el-dropdown-item
+                >
+                <el-dropdown-item
+                  command="waiting"
+                  icon="el-icon-time"
+                  :disabled="scope.row.status === 'waiting'"
+                  >Waitlist</el-dropdown-item
+                >
+                <el-dropdown-item
+                  command="rejected"
+                  icon="el-icon-close"
+                  class="eso-dropdown-item--danger"
+                  :disabled="scope.row.status === 'rejected'"
+                  >Reject</el-dropdown-item
+                >
+              </el-dropdown-menu>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -353,6 +355,9 @@ export default {
       URL.revokeObjectURL(url)
     },
     updateStatus (speaker, status) {
+      if (speaker.status === status) {
+        return
+      }
       this.$set(speaker, 'status', status)
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
