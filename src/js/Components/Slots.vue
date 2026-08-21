@@ -5,6 +5,9 @@
         <div class="eso-toolbar">
           <span class="eso-toolbar__count">{{ countLabel }}</span>
           <span class="eso-toolbar__spacer"></span>
+          <el-button icon="el-icon-share" size="small" @click="shareModal = true"
+            >Share schedule</el-button
+          >
           <el-button type="primary" icon="el-icon-plus" size="small" @click="create"
             >Add slot</el-button
           >
@@ -259,21 +262,26 @@
         <el-button size="small" type="primary" @click="addNew">Save slot</el-button>
       </span>
     </el-dialog>
+
+    <schedule-share-dialog :visible.sync="shareModal" :event-id="eventId" />
   </div>
 </template>
 
 <script>
 import EmptyState from './Common/EmptyState.vue'
+import ScheduleShareDialog from './ScheduleShareDialog.vue'
 import { gravatarUrl } from './Common/applicantHelpers'
 
 export default {
   name: 'Slots',
   components: {
-    EmptyState
+    EmptyState,
+    ScheduleShareDialog
   },
   data () {
     return {
       dialogVisible: false,
+      shareModal: false,
       loading: false,
       searchTimer: null,
       form_mock: {

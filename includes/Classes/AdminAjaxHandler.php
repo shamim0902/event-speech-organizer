@@ -35,6 +35,8 @@ class AdminAjaxHandler
             'regenerate_webhook_token' => 'regenerateWebhookToken',
             'get_webhook_mapping' => 'getWebhookMapping',
             'save_webhook_mapping' => 'saveWebhookMapping',
+            'get_schedule_share' => 'getScheduleShare',
+            'update_schedule_share' => 'updateScheduleShare',
             'save_event' => 'saveEvent',
             'delete_event' => 'deleteEvent',
         );
@@ -154,6 +156,65 @@ class AdminAjaxHandler
             'status'  => true,
             'mapping' => WebhookHandler::saveMapping($eventId, $mapping),
         ));
+    }
+
+    /**
+     * Sharing state for the event's public schedule page.
+     */
+    private function getScheduleShare()
+    {
+        // The link is a secret until the organiser shares it, so do not hand
+        // it to every logged-in user.
+        if (!AccessControl::hasTopLevelMenuPermission()) {
+            wp_send_json(array(
+                'status' => false,
+                'message' => __('You are not allowed to view this schedule link.', 'textdomain'),
+            ), 403);
+        }
+
+        $eventId = $this->requireEventId();
+
+        wp_send_json(array(
+            'status' => true,
+            'data'   => $this->scheduleShareData($eventId),
+        ), 200);
+    }
+
+    /**
+     * Switches public sharing on or off, and rotates the link on request —
+     * rotating is how an organiser revokes a link they have already sent out.
+     */
+    private function updateScheduleShare()
+    {
+        $this->guardImportRequest();
+
+        $eventId = $this->requireEventId();
+
+        if (!empty($_REQUEST['regenerate'])) {
+            SchedulePage::regenerateToken($eventId);
+        }
+
+        if (isset($_REQUEST['is_public'])) {
+            $isPublic = filter_var(
+                wp_unslash($_REQUEST['is_public']),
+                FILTER_VALIDATE_BOOLEAN
+            );
+
+            SchedulePage::setPublic($eventId, $isPublic);
+        }
+
+        wp_send_json(array(
+            'status' => true,
+            'data'   => $this->scheduleShareData($eventId),
+        ), 200);
+    }
+
+    private function scheduleShareData($eventId)
+    {
+        return array(
+            'url'       => SchedulePage::getUrl($eventId),
+            'is_public' => SchedulePage::isPublic($eventId),
+        );
     }
 
     private function webhookEventUrls()

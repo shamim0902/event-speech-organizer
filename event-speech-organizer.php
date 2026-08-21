@@ -61,6 +61,9 @@ if (!defined('EVENT_SPEECH_ORGANIZER_VERSION')) {
             // Also outside is_admin(): REST requests from remote sites are
             // front-end requests.
             \EventSpeechOrganizer\Classes\WebhookHandler::register();
+
+            // The shareable schedule is a front-end page as well.
+            \EventSpeechOrganizer\Classes\SchedulePage::register();
         }
 
         /**
