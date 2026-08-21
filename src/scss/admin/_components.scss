@@ -1215,3 +1215,118 @@
 .eso-share__revoke {
     margin-top: var(--eso-s2);
 }
+
+// Event card ----------------------------------------------------------------
+
+.eso-event-card {
+    .eso-card__footer {
+        margin-top: auto;
+    }
+}
+
+.eso-event-card__head {
+    display: block;
+    padding: var(--eso-s4) var(--eso-s4) var(--eso-s3);
+    text-decoration: none;
+
+    &:focus {
+        box-shadow: none;
+    }
+
+    &:hover .eso-card__title {
+        color: var(--eso-blue);
+    }
+}
+
+.eso-event-card__title-row {
+    display: flex;
+    align-items: center;
+    gap: var(--eso-s3);
+
+    .eso-card__title {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-size: 16px;
+        letter-spacing: -0.01em;
+    }
+
+    .eso-badge {
+        flex: 0 0 auto;
+        text-transform: capitalize;
+    }
+}
+
+.eso-event-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--eso-text-muted);
+
+    i {
+        margin-right: 2px;
+    }
+}
+
+// Three figures on one line, split by hairlines — the old boxed grid left a
+// gaping empty cell whenever the count was odd.
+.eso-event-card__stats {
+    display: flex;
+    padding: 0 var(--eso-s4);
+}
+
+.eso-event-stat {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: var(--eso-s2) 0;
+
+    & + .eso-event-stat {
+        padding-left: var(--eso-s4);
+        border-left: 1px solid var(--eso-border-subtle);
+        margin-left: var(--eso-s4);
+    }
+
+    b {
+        display: block;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.2;
+        color: var(--eso-text);
+        font-variant-numeric: tabular-nums;
+    }
+
+    span {
+        display: block;
+        margin-top: 1px;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        color: var(--eso-text-muted);
+    }
+}
+
+.eso-event-card__progress {
+    padding: var(--eso-s3) var(--eso-s4) var(--eso-s4);
+}
+
+.eso-event-card__hint {
+    margin: 6px 0 0;
+    font-size: 11.5px;
+    color: var(--eso-text-muted);
+}
+
+.eso-meter {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--eso-border-subtle);
+    overflow: hidden;
+
+    span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--eso-green);
+        transition: width 0.25s ease;
+    }
+}

@@ -25,39 +25,57 @@
 
       <ul class="eso-card-grid" v-else>
         <li v-for="event in events" :key="event.id">
-          <div class="eso-card">
-            <router-link :to="{ name: 'applicants', params: { id: event.id } }">
-              <div class="eso-card__header">
-                <div class="eso-card__header-main">
-                  <div class="eso-card__title">{{ event.title }}</div>
-                  <div class="eso-card__meta">
-                    {{ event.event_date || 'No date set'
-                    }}<template v-if="event.location"> · {{ event.location }}</template>
-                  </div>
-                </div>
+          <div class="eso-card eso-event-card">
+            <router-link
+              class="eso-event-card__head"
+              :to="{ name: 'applicants', params: { id: event.id } }"
+            >
+              <div class="eso-event-card__title-row">
+                <span class="eso-card__title">{{ event.title }}</span>
                 <span
                   class="eso-badge"
                   :class="event.status === 'archived' ? 'eso-badge--break' : 'eso-badge--approved'"
                   >{{ event.status }}</span
                 >
               </div>
+
+              <div class="eso-event-card__meta">
+                <span><i class="el-icon-date"></i> {{ event.event_date || 'No date set' }}</span>
+                <span v-if="event.location">
+                  <i class="el-icon-location-outline"></i> {{ event.location }}
+                </span>
+              </div>
             </router-link>
 
-            <div class="eso-card__body">
-              <div class="eso-stats">
-                <div class="eso-stat">
-                  <div class="eso-stat__value">{{ event.applicants }}</div>
-                  <div class="eso-stat__label">Applicants</div>
-                </div>
-                <div class="eso-stat">
-                  <div class="eso-stat__value">{{ event.approved }}</div>
-                  <div class="eso-stat__label">Approved</div>
-                </div>
-                <div class="eso-stat">
-                  <div class="eso-stat__value">{{ event.slots }}</div>
-                  <div class="eso-stat__label">Slots</div>
-                </div>
+            <div class="eso-event-card__stats">
+              <div class="eso-event-stat">
+                <b>{{ event.applicants }}</b>
+                <span>Applicants</span>
               </div>
+              <div class="eso-event-stat">
+                <b>{{ event.approved }}</b>
+                <span>Approved</span>
+              </div>
+              <div class="eso-event-stat">
+                <b>{{ event.slots }}</b>
+                <span>Slots</span>
+              </div>
+            </div>
+
+            <div class="eso-event-card__progress" v-if="Number(event.approved)">
+              <div class="eso-meter" :title="scheduleLabel(event)">
+                <span :style="{ width: scheduledPercent(event) + '%' }"></span>
+              </div>
+              <p class="eso-event-card__hint">{{ scheduleLabel(event) }}</p>
+            </div>
+            <div class="eso-event-card__progress" v-else>
+              <p class="eso-event-card__hint">
+                {{
+                  Number(event.applicants)
+                    ? 'No applicants approved yet.'
+                    : 'No applications received yet.'
+                }}
+              </p>
             </div>
 
             <div class="eso-card__footer">
@@ -257,6 +275,30 @@ export default {
      */
     shouldAutoOpen (events) {
       return events.length === 1 && !this.$route.query.all
+    },
+    /**
+     * How much of the approved line-up already has a slot. Slots can hold
+     * several speakers and can exist without one, so this is a rough
+     * completeness signal rather than an exact ratio — hence capping at 100.
+     */
+    scheduledPercent (event) {
+      const approved = Number(event.approved) || 0
+
+      if (!approved) {
+        return 0
+      }
+
+      return Math.min(100, Math.round((Number(event.slots) || 0) / approved * 100))
+    },
+    scheduleLabel (event) {
+      const approved = Number(event.approved) || 0
+      const slots = Number(event.slots) || 0
+
+      if (!slots) {
+        return approved + ' approved · nothing scheduled yet'
+      }
+
+      return slots + ' slot' + (slots === 1 ? '' : 's') + ' for ' + approved + ' approved speaker' + (approved === 1 ? '' : 's')
     },
     create () {
       this.form = emptyForm()
