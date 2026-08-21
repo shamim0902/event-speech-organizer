@@ -4,7 +4,7 @@
 Plugin Name: Event Speech Organizer
 Plugin URI: #
 Description: A WordPress plugin to manage event eventSpeechOrganizer and schedule event speech
-Version: 1.0.0
+Version: 1.3.0
 Author: #
 Author URI: #
 License: A "Slug" license name e.g. GPL2
@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
 }
 if (!defined('EVENT_SPEECH_ORGANIZER_VERSION')) {
     define('EVENT_SPEECH_ORGANIZER_VERSION_LITE', true);
-    define('EVENT_SPEECH_ORGANIZER_VERSION', '1.2.0');
+    define('EVENT_SPEECH_ORGANIZER_VERSION', '1.3.0');
     define('EVENT_SPEECH_ORGANIZER_MAIN_FILE', __FILE__);
     define('EVENT_SPEECH_ORGANIZER_URL', plugin_dir_url(__FILE__));
     define('EVENT_SPEECH_ORGANIZER_DIR', plugin_dir_path(__FILE__));

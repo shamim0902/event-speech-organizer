@@ -10,3 +10,7 @@
 
 Now run `npm run watch` for development and for production build run `npm run production`
 Then activate the plugin from your WP admin dashboard.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).

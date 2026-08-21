@@ -25,6 +25,7 @@ INCLUDE_ITEMS=(
     "includes"
     "assets"
     "languages"
+    "CHANGELOG.md"
 )
 
 echo -e "${BLUE}📦 Creating ZIP archive...${NC}"
