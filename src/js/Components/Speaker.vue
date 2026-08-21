@@ -77,7 +77,11 @@
 
               <router-link
                 class="eso-link-btn"
-                :to="{ name: 'applicant', params: { id: eventId, applicantId: scope.row.id } }"
+                :to="{
+                  name: 'applicant',
+                  params: { id: eventId, applicantId: scope.row.id },
+                  query: { from: $route.name }
+                }"
               >
                 Open applicant page <i class="el-icon-arrow-right"></i>
               </router-link>
@@ -199,8 +203,7 @@ import ApplicantFormDialog from './ApplicantFormDialog.vue'
 import { IMPORT_FIELDS, toCsv } from './Common/csv'
 import { gravatarUrl, wpProfileUrl, loadAssignedSpeakerIds } from './Common/applicantHelpers'
 import listState from './Common/listState'
-
-const STATUS_ORDER = { approved: 0, waiting: 1, rejected: 2 }
+import { filterAndSort } from './Common/applicantList'
 
 export default {
   name: 'Speaker',
@@ -233,32 +236,7 @@ export default {
       return this.$route.params.id
     },
     visibleSpeakers () {
-      const query = this.listState.search.trim().toLowerCase()
-
-      let list = this.eventSpeechOrganizer.filter(speaker => {
-        if (!query) {
-          return true
-        }
-        return ['name', 'email', 'topic'].some(field => {
-          return (speaker[field] || '').toLowerCase().indexOf(query) > -1
-        })
-      })
-
-      list = list.slice()
-
-      if (this.listState.sortBy === 'name') {
-        list.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-      } else if (this.sortBy === 'status') {
-        list.sort((a, b) => {
-          const rankA = STATUS_ORDER[a.status] !== undefined ? STATUS_ORDER[a.status] : 3
-          const rankB = STATUS_ORDER[b.status] !== undefined ? STATUS_ORDER[b.status] : 3
-          return rankA - rankB
-        })
-      } else {
-        list.sort((a, b) => Number(b.id) - Number(a.id))
-      }
-
-      return list
+      return filterAndSort(this.eventSpeechOrganizer, this.listState, null)
     },
     emptyTitle () {
       return this.listState.search ? 'No matching applicants' : 'No applicants in this list'
@@ -321,7 +299,8 @@ export default {
 
       this.$router.push({
         name: 'applicant',
-        params: { id: this.eventId, applicantId: row.id }
+        params: { id: this.eventId, applicantId: row.id },
+        query: { from: this.$route.name }
       })
     },
     refresh () {

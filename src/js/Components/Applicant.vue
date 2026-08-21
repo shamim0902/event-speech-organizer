@@ -3,9 +3,33 @@
     <div class="eso-applicant__topbar">
       <div class="eso-page-header__breadcrumb">
         <i class="el-icon-back"></i>
-        <router-link :to="{ name: 'applicants', params: { id: eventId } }"
-          >All applicants</router-link
+        <router-link :to="{ name: section, params: { id: eventId } }">{{
+          backLabel
+        }}</router-link>
+      </div>
+
+      <div class="eso-applicant__nav" v-if="applicant">
+        <span class="eso-applicant__position" v-if="siblings.length > 1">
+          {{ position }} of {{ siblings.length }}
+        </span>
+        <button
+          class="eso-icon-btn"
+          type="button"
+          :disabled="!previous"
+          :title="previous ? 'Previous: ' + previous.name : 'No previous applicant'"
+          @click="go(previous)"
         >
+          <i class="el-icon-arrow-left"></i>
+        </button>
+        <button
+          class="eso-icon-btn"
+          type="button"
+          :disabled="!next"
+          :title="next ? 'Next: ' + next.name : 'No next applicant'"
+          @click="go(next)"
+        >
+          <i class="el-icon-arrow-right"></i>
+        </button>
       </div>
 
       <el-dropdown
@@ -40,7 +64,7 @@
     >
       <el-button
         size="small"
-        @click="$router.push({ name: 'applicants', params: { id: eventId } })"
+        @click="$router.push({ name: section, params: { id: eventId } })"
         >Back to applicants</el-button
       >
     </empty-state>
@@ -210,6 +234,8 @@ import ConfirmDeleteDialog from './Common/ConfirmDeleteDialog.vue'
 import StatusBadge from './Common/StatusBadge.vue'
 import ApplicantFormDialog from './ApplicantFormDialog.vue'
 import { gravatarUrl, wpProfileUrl, loadAssignedSpeakerIds } from './Common/applicantHelpers'
+import { filterAndSort, statusesForSection } from './Common/applicantList'
+import listState from './Common/listState'
 
 export default {
   name: 'Applicant',
@@ -222,6 +248,8 @@ export default {
   data () {
     return {
       applicant: null,
+      applicants: [],
+      listState,
       loading: false,
       editModal: false,
       deleteVisible: false,
@@ -240,6 +268,45 @@ export default {
     },
     applicantId () {
       return this.$route.params.applicantId
+    },
+    /**
+     * The list route the user arrived from — prev/next walks that same list,
+     * in the same order, so the arrows match what the table showed.
+     */
+    section () {
+      const from = this.$route.query.from
+      return from && from !== 'applicant' ? from : 'applicants'
+    },
+    backLabel () {
+      const labels = {
+        selected: 'Approved applicants',
+        waiting: 'Waitlisted applicants',
+        rejected: 'Rejected applicants'
+      }
+      return labels[this.section] || 'All applicants'
+    },
+    siblings () {
+      return filterAndSort(
+        this.applicants,
+        this.listState,
+        statusesForSection(this.section)
+      )
+    },
+    currentIndex () {
+      return this.siblings.findIndex(
+        item => String(item.id) === String(this.applicantId)
+      )
+    },
+    position () {
+      return this.currentIndex + 1
+    },
+    previous () {
+      return this.currentIndex > 0 ? this.siblings[this.currentIndex - 1] : null
+    },
+    next () {
+      return this.currentIndex > -1 && this.currentIndex < this.siblings.length - 1
+        ? this.siblings[this.currentIndex + 1]
+        : null
     },
     needsSlot () {
       return (
@@ -283,13 +350,26 @@ export default {
         event_id: this.eventId
       })
         .then(response => {
-          const applicants = (response && response.data) || []
+          this.applicants = (response && response.data) || []
           this.applicant =
-            applicants.find(item => String(item.id) === String(this.applicantId)) || null
+            this.applicants.find(
+              item => String(item.id) === String(this.applicantId)
+            ) || null
         })
         .always(() => {
           this.loading = false
         })
+    },
+    go (applicant) {
+      if (!applicant) {
+        return
+      }
+
+      this.$router.push({
+        name: 'applicant',
+        params: { id: this.eventId, applicantId: applicant.id },
+        query: { from: this.section }
+      })
     },
     onMenuCommand (command) {
       if (command === 'edit') {
@@ -355,6 +435,18 @@ export default {
   watch: {
     // vue-router reuses this component when only the params change.
     applicantId () {
+      // Paging with the arrows already has the list in hand — swap locally so
+      // it feels instant, and only hit the server when we don't.
+      const known = this.applicants.find(
+        item => String(item.id) === String(this.applicantId)
+      )
+
+      if (known) {
+        this.applicant = known
+        this.fetchSlots()
+        return
+      }
+
       this.fetch()
     }
   },
