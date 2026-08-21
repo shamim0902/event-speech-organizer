@@ -1330,3 +1330,9 @@
         transition: width 0.25s ease;
     }
 }
+
+.eso-table__applied {
+    font-size: 13px;
+    color: var(--eso-text);
+    white-space: nowrap;
+}

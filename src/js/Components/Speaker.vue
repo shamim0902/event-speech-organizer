@@ -119,10 +119,15 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Applied" width="160">
+        <el-table-column label="Applied" width="150">
           <template slot-scope="scope">
-            <div class="eso-table__meta">
-              #{{ scope.row.id }} · {{ scope.row.date || '—' }}
+            <div :title="appliedTitle(scope.row)">
+              <div class="eso-table__applied">
+                {{ appliedDate(scope.row.date) }}
+              </div>
+              <div class="eso-table__meta">
+                {{ appliedMeta(scope.row) }}
+              </div>
             </div>
           </template>
         </el-table-column>
@@ -204,6 +209,7 @@ import { IMPORT_FIELDS, toCsv } from './Common/csv'
 import { gravatarUrl, wpProfileUrl, loadAssignedSpeakerIds } from './Common/applicantHelpers'
 import listState from './Common/listState'
 import { filterAndSort } from './Common/applicantList'
+import { formatDate, formatDateTime, formatRelative, formatTime } from './Common/dates'
 
 export default {
   name: 'Speaker',
@@ -350,6 +356,21 @@ export default {
         this.$message.success(speaker.name + ' marked as ' + status + '.')
         this.refresh()
       })
+    },
+    appliedDate (value) {
+      return formatRelative(value) || formatDate(value) || '—'
+    },
+    /**
+     * Second line carries the clock time and the application number — the
+     * number is what organisers quote to each other.
+     */
+    appliedMeta (row) {
+      const time = formatTime(row.date)
+
+      return (time ? time + ' · ' : '') + '#' + row.id
+    },
+    appliedTitle (row) {
+      return row.date ? 'Applied ' + formatDateTime(row.date) : ''
     },
     get_gravatar_image_url: gravatarUrl,
     wpProfile: wpProfileUrl

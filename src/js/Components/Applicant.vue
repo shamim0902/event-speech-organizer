@@ -82,7 +82,8 @@
             />
             <div class="eso-applicant__name">{{ applicant.name }}</div>
             <div class="eso-card__meta">
-              #{{ applicant.id }} · Applied {{ applicant.date || '—' }}
+              #{{ applicant.id }} ·
+              {{ applicant.date ? 'Applied ' + appliedLabel : 'No application date' }}
             </div>
             <div class="eso-status-stack eso-status-stack--row">
               <status-badge :status="applicant.status" />
@@ -238,6 +239,7 @@ import StatusBadge from './Common/StatusBadge.vue'
 import ApplicantFormDialog from './ApplicantFormDialog.vue'
 import { gravatarUrl, wpProfileUrl, loadAssignedSpeakerIds } from './Common/applicantHelpers'
 import { filterAndSort, statusesForSection } from './Common/applicantList'
+import { formatDateTime, formatRelative, formatTime } from './Common/dates'
 import listState from './Common/listState'
 
 export default {
@@ -319,6 +321,14 @@ export default {
         this.applicant.status === 'approved' &&
         this.assignedSpeakerIds.indexOf(String(this.applicant.id)) === -1
       )
+    },
+    appliedLabel () {
+      const applicant = this.applicant || {}
+      const relative = formatRelative(applicant.date)
+
+      return relative
+        ? relative.toLowerCase() + ' at ' + formatTime(applicant.date)
+        : formatDateTime(applicant.date)
     },
     hasContact () {
       const applicant = this.applicant || {}
