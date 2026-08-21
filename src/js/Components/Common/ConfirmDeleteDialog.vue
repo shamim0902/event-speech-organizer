@@ -16,10 +16,11 @@
       </div>
     </div>
 
-    <label class="eso-confirm__label">
+    <label class="eso-confirm__label" v-if="requireTyping">
       Type <code>{{ word }}</code> to confirm
     </label>
     <el-input
+      v-if="requireTyping"
       ref="input"
       v-model="typed"
       :placeholder="word"
@@ -55,6 +56,7 @@ export default {
     message: { type: String, required: true },
     hint: { type: String, default: '' },
     word: { type: String, default: 'delete' },
+    requireTyping: { type: Boolean, default: true },
     confirmText: { type: String, default: 'Delete' },
     loading: { type: Boolean, default: false }
   },
@@ -63,6 +65,9 @@ export default {
   },
   computed: {
     matches () {
+      if (!this.requireTyping) {
+        return true
+      }
       return this.typed.trim().toLowerCase() === this.word.toLowerCase()
     }
   },
@@ -75,7 +80,7 @@ export default {
   },
   watch: {
     visible (open) {
-      if (open) {
+      if (open && this.requireTyping) {
         this.$nextTick(() => {
           this.$refs.input && this.$refs.input.focus()
         })

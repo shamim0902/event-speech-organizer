@@ -270,17 +270,17 @@
 }
 
 // Edit / Delete, half width each.
-.eso-applicant__manage {
+// Breadcrumb row on the single applicant page, with its actions menu at the
+// far right.
+.eso-applicant__topbar {
     display: flex;
-    gap: var(--eso-s2);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--eso-s3);
+    margin-bottom: var(--eso-s3);
 
-    .el-button {
-        flex: 1 1 0;
-
-        // Element's default sibling spacing fights the flex gap.
-        & + .el-button {
-            margin-left: 0;
-        }
+    .eso-page-header__breadcrumb {
+        margin-bottom: 0;
     }
 }
 

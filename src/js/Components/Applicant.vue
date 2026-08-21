@@ -1,10 +1,35 @@
 <template>
   <div v-loading="loading">
-    <div class="eso-page-header__breadcrumb" style="margin-bottom: 12px">
-      <i class="el-icon-back"></i>
-      <router-link :to="{ name: 'applicants', params: { id: eventId } }"
-        >All applicants</router-link
+    <div class="eso-applicant__topbar">
+      <div class="eso-page-header__breadcrumb">
+        <i class="el-icon-back"></i>
+        <router-link :to="{ name: 'applicants', params: { id: eventId } }"
+          >All applicants</router-link
+        >
+      </div>
+
+      <el-dropdown
+        v-if="applicant"
+        trigger="click"
+        placement="bottom-end"
+        @command="onMenuCommand"
       >
+        <button class="eso-icon-btn" type="button" title="More actions">
+          <i class="el-icon-more"></i>
+        </button>
+        <el-dropdown-menu slot="dropdown">
+          <el-dropdown-item command="edit" icon="el-icon-edit"
+            >Edit applicant</el-dropdown-item
+          >
+          <el-dropdown-item
+            command="delete"
+            icon="el-icon-delete"
+            class="eso-dropdown-item--danger"
+            divided
+            >Delete applicant</el-dropdown-item
+          >
+        </el-dropdown-menu>
+      </el-dropdown>
     </div>
 
     <empty-state
@@ -96,22 +121,6 @@
               </button>
             </div>
 
-            <div class="eso-applicant__manage">
-              <el-button
-                size="small"
-                icon="el-icon-edit"
-                @click="editModal = true"
-                >Edit</el-button
-              >
-              <el-button
-                size="small"
-                type="danger"
-                plain
-                icon="el-icon-delete"
-                @click="confirmRemove"
-                >Delete</el-button
-              >
-            </div>
           </div>
         </div>
       </aside>
@@ -174,6 +183,17 @@
       </main>
     </div>
 
+    <confirm-delete-dialog
+      v-if="applicant"
+      :visible.sync="deleteVisible"
+      title="Delete applicant"
+      :message="'Delete \'' + applicant.name + '\'?'"
+      hint="Their application details will be removed from this event. This cannot be undone."
+      :require-typing="false"
+      :loading="deleting"
+      @confirm="remove"
+    />
+
     <applicant-form-dialog
       v-if="applicant"
       :visible.sync="editModal"
@@ -186,6 +206,7 @@
 
 <script>
 import EmptyState from './Common/EmptyState.vue'
+import ConfirmDeleteDialog from './Common/ConfirmDeleteDialog.vue'
 import StatusBadge from './Common/StatusBadge.vue'
 import ApplicantFormDialog from './ApplicantFormDialog.vue'
 import { gravatarUrl, wpProfileUrl, loadAssignedSpeakerIds } from './Common/applicantHelpers'
@@ -194,6 +215,7 @@ export default {
   name: 'Applicant',
   components: {
     EmptyState,
+    ConfirmDeleteDialog,
     StatusBadge,
     ApplicantFormDialog
   },
@@ -202,6 +224,8 @@ export default {
       applicant: null,
       loading: false,
       editModal: false,
+      deleteVisible: false,
+      deleting: false,
       assignedSpeakerIds: [],
       statusChoices: [
         { status: 'approved', label: 'Approve', icon: 'el-icon-circle-check' },
@@ -267,20 +291,16 @@ export default {
           this.loading = false
         })
     },
-    confirmRemove () {
-      this.$confirm(
-        'Delete "' + this.applicant.name + '"? This cannot be undone.',
-        'Delete applicant',
-        {
-          confirmButtonText: 'Delete',
-          cancelButtonText: 'Cancel',
-          type: 'warning'
-        }
-      )
-        .then(() => this.remove())
-        .catch(() => {})
+    onMenuCommand (command) {
+      if (command === 'edit') {
+        this.editModal = true
+      } else if (command === 'delete') {
+        this.deleteVisible = true
+      }
     },
     remove () {
+      this.deleting = true
+
       this.$post({
         action: 'event_speech_organizer_admin_ajax',
         route: 'delete_applicant',
@@ -306,6 +326,9 @@ export default {
               ? xhr.responseJSON.message
               : 'Could not delete the applicant.'
           this.$message.error(message)
+        })
+        .always(() => {
+          this.deleting = false
         })
     },
     updateStatus (status) {
